@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Suc",
+  "version": "0.1",
+  "description": "",
+  "content_scripts": [
+    {
+      "matches": ["*://mail.google.com/*"],
+      "js": ["content_script.js"]
+    }
+  ]
+}
