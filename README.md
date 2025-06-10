@@ -9,6 +9,10 @@
 - [Secrets of Game Feel and Juice](https://www.youtube.com/watch?v=216_5nu4aVQ)
 - [Jan Willem Nijman - Vlambeer - "The art of screenshake" at INDIGO Classes 2013](https://www.youtube.com/watch?v=AJdEqssNZ-U)
 
+Make email less boring
+
+https://github.com/user-attachments/assets/c40aea05-791e-4d28-b142-dadf06726956
+
 ---
 
 This is 50% Gemini and 50% me:
@@ -22,3 +26,5 @@ This is 50% Gemini and 50% me:
 - I would really like to extend this to "juice up" other boring interactions, but it seems extremely hard to generalise.
 
 ## Why?
+
+![nf](https://github.com/user-attachments/assets/5daa2e35-08af-4d7e-ac80-f195886168e0)
