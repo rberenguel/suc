@@ -9,6 +9,10 @@ const config = {
   PARTICLE_DECAY_MIN: 0.007,
   PARTICLE_DECAY_RANDOM: 0.005,
   TABLE_SELECTOR: 'td[data-tooltip="Select"]',
+  FUSE_INTERVAL_MS: 8, // Time between fuse explosions. Higher = slower fuse.
+  FUSE_STEP_PX: 25, // Distance between fuse explosions. Higher = sparser fuse.
+  FIREWORK_SPEED_MULTIPLIER: 0.9, // Overall speed of archive firework particles.
+  EXPLOSION_SPEED_MULTIPLIER: 0.8, // Overall speed of fuse explosion particles.
 };
 
 const state = {
@@ -85,7 +89,9 @@ const fireworks = {
 
     for (let i = 0; i < particlesLength; i++) {
       const angle = (i / particlesLength) * Math.PI * 2;
-      const speed = Math.random() * 0.8 + Math.random() * 0.4;
+      const speed =
+        (Math.random() * 0.8 + Math.random() * 0.4) *
+        config.FIREWORK_SPEED_MULTIPLIER;
       state.particles.push({
         x,
         y,
@@ -111,7 +117,7 @@ const fireworks = {
     const particlesLength = 40 + Math.random() * 20;
     for (let i = 0; i < particlesLength; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 4;
+      const speed = (1 + Math.random() * 4) * config.EXPLOSION_SPEED_MULTIPLIER;
       state.particles.push({
         x,
         y,
@@ -357,7 +363,7 @@ const keyboard = {
     const w = document.documentElement.clientWidth,
       h = document.documentElement.clientHeight;
     for (let i = 0; i < 10 + Math.random() * 15; i++) {
-      fireworks.explosion(Math.random() * w, Math.random() * h);
+      fireworks.explode(Math.random() * w, Math.random() * h);
     }
   },
   triggerMarkAsReadEffect() {
@@ -431,7 +437,7 @@ const domObserver = {
       }
       fireworks.explosion(currentX, rect.top + Math.random() * rect.height);
       currentX += 25;
-    }, 8);
+    }, config.FUSE_INTERVAL_MS);
   },
 };
 
