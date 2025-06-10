@@ -18,7 +18,7 @@ const state = {
     ctx: null,
     keyboard: {
         lastAction: undefined,
-        keyHistory: [], // More descriptive name
+        keyHistory: [],
     },
 };
 
@@ -87,13 +87,12 @@ const fireworks = {
 
         state.particles.forEach(p => {
             p.x += p.vx; p.y += p.vy;
-            p.y += (p.alpha > 0.5 ? -25 : 2) * p.decay; // Simplified gravity/lift
+            p.y += (p.alpha > 0.5 ? -25 : 2) * p.decay;
             p.vx *= config.FIREWORK_FRICTION; p.vy *= config.FIREWORK_FRICTION;
             p.alpha -= p.decay;
             p.trail.push({ x: p.x, y: p.y, alpha: p.alpha });
             if (p.trail.length > (5 + Math.random() * 10)) p.trail.shift();
 
-            // Drawing logic...
             p.trail.forEach(trailPoint => this.drawParticle(p, trailPoint.x, trailPoint.y, trailPoint.alpha, true));
             if (p.alpha > 0) this.drawParticle(p, p.x, p.y, p.alpha * 4, false);
         });
@@ -102,7 +101,7 @@ const fireworks = {
             requestAnimationFrame(this.animate.bind(this));
         } else {
             state.animationRunning = false;
-            this.destroyCanvas(); // Auto-cleanup canvas when done
+            this.destroyCanvas();
         }
     },
 
@@ -156,7 +155,7 @@ const keyboard = {
         const key = e.key.toLowerCase();
         if (key !== "shift") {
             state.keyboard.keyHistory.push(key);
-            state.keyboard.keyHistory = state.keyboard.keyHistory.slice(-2); // Keep last 2 keys
+            state.keyboard.keyHistory = state.keyboard.keyHistory.slice(-2);
         }
 
         const lastTwoKeys = state.keyboard.keyHistory.join('');
@@ -188,67 +187,63 @@ const keyboard = {
 
 /**
  * Observes the DOM for table changes and triggers actions.
- * This version uses a single observer on the table container to handle
- * cases where rows are removed and re-added (e.g., on "undo").
+ * This version uses a single, persistent observer on the document body.
  */
 const domObserver = {
     init() {
-        // This part is the same: wait for the table to exist initially.
-        const bodyObserver = new MutationObserver((mutations, observer) => {
-            const tableCell = document.querySelector(config.TABLE_SELECTOR);
-            if (tableCell) {
-                console.log("Table container detected. Initializing single table observer.");
-                // Find a stable parent container for all rows.
-                const tableContainer = tableCell.closest('tbody') || tableCell.closest('table');
-                if (tableContainer) {
-                    this.observeTableContainer(tableContainer);
-                }
-                observer.disconnect(); // We found it, no need to observe the whole body anymore.
-            }
+        const observer = new MutationObserver(this.handleMutation.bind(this));
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ['aria-checked', 'class'] // More specific monitoring
         });
-        bodyObserver.observe(document.body, { childList: true, subtree: true });
+        console.log("Persistent body observer initialized.");
     },
 
-    observeTableContainer(container) {
-        // Create ONE observer and attach it to the stable parent (e.g., <tbody>).
-        const tableObserver = new MutationObserver(this.handleTableMutation.bind(this));
-        
-        tableObserver.observe(container, {
-            childList: true, // CRITICAL: This detects when <tr> nodes are added/removed.
-            subtree: true,   // IMPORTANT: This detects changes deep inside any row.
-        });
+    handleMutation(mutationsList) {
+        if (!["selectOne", "selectAll"].includes(state.keyboard.lastAction)) {
+            return;
+        }
 
-        console.log(`Single observer attached to stable container:`, container);
-    },
-
-    handleTableMutation(mutationsList) {
-        // This single callback handles all changes within the table.
         for (const mutation of mutationsList) {
-            // Find the <tr> that was affected by this specific mutation.
+            // Find the parent row of whatever changed in the DOM
             const row = mutation.target.closest('tr');
 
-            // Ensure it's a row we care about (i.e., contains our target cell).
-            if (!row || !row.querySelector(config.TABLE_SELECTOR)) {
-                continue;
-            }
-
-            // The rest of the logic is identical to before. We just derive the `row`
-            // from the mutation record instead of from a pre-defined list.
-            const divInstance = row.querySelectorAll("td")[4]?.querySelector("DIV");
-
-            if (divInstance?.textContent.startsWith("selected") && ["selectOne", "selectAll"].includes(state.keyboard.lastAction)) {
-                const tdToShake = divInstance.closest("tr");
-                if (tdToShake) {
-                    if (!document.getElementById("fireworks")) fireworks.setupCanvas();
-                    const rect = tdToShake.getBoundingClientRect();
-                    domInteraction.shakeElement(tdToShake, config.SHAKE_OFFSET_TD);
-                    domInteraction.shakeElement(document.body, config.SHAKE_OFFSET_BODY);
-                    fireworks.explode(rect.x + 20, rect.y + rect.height / 2);
-                }
+            // Ensure it's an email row and it is now selected
+            if (row && row.querySelector(config.TABLE_SELECTOR) && this.isRowSelected(row)) {
+                this.triggerEffect(row);
+                // We've reacted, so we can break to avoid multiple effects for one action
+                return; 
             }
         }
+    },
+
+    isRowSelected(row) {
+        // Gmail uses different ways to mark selection. Let's check a few.
+        // 1. The checkbox has aria-checked="true"
+        const checkbox = row.querySelector('td[role="gridcell"] div[role="checkbox"]');
+        if (checkbox && checkbox.getAttribute('aria-checked') === 'true') {
+            return true;
+        }
+        // 2. Fallback to the original text-based check
+        const divInstance = row.querySelectorAll("td")[4]?.querySelector("DIV");
+        if (divInstance?.textContent.startsWith("selected")) {
+            return true;
+        }
+        return false;
+    },
+
+    triggerEffect(row) {
+        if (!document.getElementById("fireworks")) fireworks.setupCanvas();
+        const rect = row.getBoundingClientRect();
+        domInteraction.shakeElement(row, config.SHAKE_OFFSET_TD);
+        domInteraction.shakeElement(document.body, config.SHAKE_OFFSET_BODY);
+        fireworks.explode(rect.x + 20, rect.y + rect.height / 2);
     }
 };
+
 
 // --- 3. Script Entry Point ---
 // Kicks everything off.
