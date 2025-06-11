@@ -10,9 +10,10 @@ const config = {
   PARTICLE_DECAY_RANDOM: 0.005,
   TABLE_SELECTOR: 'td[data-tooltip="Select"]',
   FUSE_INTERVAL_MS: 8, // Time between fuse explosions. Higher = slower fuse.
-  FUSE_STEP_PX: 25, // Distance between fuse explosions. Higher = sparser fuse.
   FIREWORK_SPEED_MULTIPLIER: 0.9, // Overall speed of archive firework particles.
   EXPLOSION_SPEED_MULTIPLIER: 0.8, // Overall speed of fuse explosion particles.
+  MAX_FUSE_EXPLOSIONS: 30, // Max total explosions for the fuse effect.
+  MIN_FUSE_EXPLOSIONS_PER_ROW: 3, // Desired minimum explosions per row.
 };
 
 const state = {
@@ -177,7 +178,11 @@ const fireworks = {
         } else {
           p.y += (p.alpha > 0.5 ? -25 : 2) * p.decay;
           if (!p.trail) p.trail = [];
-          p.trail.push({ x: p.x, y: p.y, alpha: p.alpha });
+          p.trail.push({
+            x: p.x,
+            y: p.y,
+            alpha: p.alpha,
+          });
           if (p.trail.length > 5 + Math.random() * 10) p.trail.shift();
         }
         p.vx *= config.FIREWORK_FRICTION;
@@ -259,14 +264,21 @@ const fireworks = {
         c[1] * (150 + Math.random() * 100)
       },${c[2] * (150 + Math.random() * 100)}`;
     const silver = Array.from(
-      { length: 4 },
+      {
+        length: 4,
+      },
       () =>
         `rgb(${[...Array(3)].map(() => 200 + Math.random() * 55).join(", ")}, `,
     );
-    const gold = Array.from({ length: 4 }, () => {
-      const s = 150 + Math.random() * 85;
-      return `rgb(${s}, ${0.8 * s}, 100, `;
-    });
+    const gold = Array.from(
+      {
+        length: 4,
+      },
+      () => {
+        const s = 150 + Math.random() * 85;
+        return `rgb(${s}, ${0.8 * s}, 100, `;
+      },
+    );
     const rainbow = [
       [1, 0, 0],
       [1, 0.5, 0],
@@ -307,6 +319,17 @@ const fireworks = {
  * Handles DOM element interactions.
  */
 const domInteraction = {
+  isElementInViewport(el) {
+    const rect = el.getBoundingClientRect();
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <=
+        (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+  },
+
   shakeElement(element, maxOffset) {
     element.style.transition = "transform 0.1s ease-in-out";
     const randomX = Math.floor((Math.random() - 0.5) * 2 * maxOffset);
@@ -330,7 +353,6 @@ const keyboard = {
   },
   handleKeyDown(e) {
     const key = e.key.toLowerCase();
-    console.log(state.keyboard.lastAction);
     if (key !== "shift") {
       state.keyboard.keyHistory.push(key);
       state.keyboard.keyHistory = state.keyboard.keyHistory.slice(-2);
@@ -349,7 +371,6 @@ const keyboard = {
       state.keyboard.lastAction = "archive";
       this.triggerArchiveAction();
     } else if (key === "i") {
-      console.log("i!");
       state.keyboard.lastAction = "markAsRead";
       this.triggerMarkAsReadEffect();
     } else {
@@ -366,14 +387,30 @@ const keyboard = {
       fireworks.explode(Math.random() * w, Math.random() * h);
     }
   },
+
   triggerMarkAsReadEffect() {
     if (!state.effectsEnabled) return;
+
     const selectedRows = [...document.querySelectorAll("tr")].filter((row) =>
       domObserver.isRowSelected(row),
     );
-    console.log(selectedRows);
-    selectedRows.forEach((row, i) => {
-      setTimeout(() => domObserver.startFuseAnimation(row), i * 50);
+
+    const visibleSelectedRows = selectedRows.filter((row) =>
+      domInteraction.isElementInViewport(row),
+    );
+    if (visibleSelectedRows.length === 0) return;
+
+    const numVisibleRows = visibleSelectedRows.length;
+    const explosionsPerRow = Math.max(
+      config.MIN_FUSE_EXPLOSIONS_PER_ROW,
+      Math.floor(config.MAX_FUSE_EXPLOSIONS / numVisibleRows),
+    );
+
+    visibleSelectedRows.forEach((row, i) => {
+      setTimeout(
+        () => domObserver.startFuseAnimation(row, explosionsPerRow),
+        i * 50,
+      );
     });
   },
 };
@@ -400,8 +437,6 @@ const domObserver = {
         const row = mutation.target.closest("tr");
         if (row && this.isRowSelected(row)) {
           this.triggerEffect(row);
-          // TODO: improve the potential needed effect debouncing
-          //state.keyboard.lastAction = undefined;
           return;
         }
       }
@@ -427,16 +462,22 @@ const domObserver = {
       onAimComplete,
     );
   },
-  startFuseAnimation(row) {
+
+  startFuseAnimation(row, explosionsPerRow) {
     const rect = row.getBoundingClientRect();
-    let currentX = rect.left;
+    if (rect.width <= 0 || !explosionsPerRow) return;
+
+    const step = rect.width / explosionsPerRow;
+    let explosionCount = 0;
+
     const fuseInterval = setInterval(() => {
-      if (currentX > rect.right) {
+      if (explosionCount >= explosionsPerRow) {
         clearInterval(fuseInterval);
         return;
       }
+      const currentX = rect.left + explosionCount * step;
       fireworks.explosion(currentX, rect.top + Math.random() * rect.height);
-      currentX += 25;
+      explosionCount++;
     }, config.FUSE_INTERVAL_MS);
   },
 };
@@ -549,7 +590,9 @@ const effectsToggle = {
       .addEventListener("change", (event) => {
         const isEnabled = event.target.checked;
         state.effectsEnabled = isEnabled;
-        chrome.storage.sync.set({ [this.key]: isEnabled });
+        chrome.storage.sync.set({
+          [this.key]: isEnabled,
+        });
       });
   },
 };
