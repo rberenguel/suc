@@ -12,8 +12,8 @@ const config = {
   FUSE_INTERVAL_MS: 8, // Time between fuse explosions. Higher = slower fuse.
   FIREWORK_SPEED_MULTIPLIER: 0.9, // Overall speed of archive firework particles.
   EXPLOSION_SPEED_MULTIPLIER: 0.8, // Overall speed of fuse explosion particles.
-  MAX_FUSE_EXPLOSIONS: 30, // Max total explosions for the fuse effect.
-  MIN_FUSE_EXPLOSIONS_PER_ROW: 3, // Desired minimum explosions per row.
+  MAX_FUSE_EXPLOSIONS: 50, // Max total explosions for the fuse effect.
+  MIN_FUSE_EXPLOSIONS_PER_ROW: 5, // Desired minimum explosions per row.
 };
 
 const state = {
@@ -475,7 +475,7 @@ const domObserver = {
         clearInterval(fuseInterval);
         return;
       }
-      const currentX = rect.left + explosionCount * step;
+      const currentX = rect.left + explosionCount * step + Math.random() * step;
       fireworks.explosion(currentX, rect.top + Math.random() * rect.height);
       explosionCount++;
     }, config.FUSE_INTERVAL_MS);
