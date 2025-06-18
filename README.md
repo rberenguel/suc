@@ -4,9 +4,13 @@
 >
 > **Juice**
 
-Make email less boring
+Make working less boring.
+
+Explosions on marking as read / archiving.
 
 https://github.com/user-attachments/assets/c40aea05-791e-4d28-b142-dadf06726956
+
+A distraction blocker that gives you a score for not disabling it.
 
 ## Reference material
 

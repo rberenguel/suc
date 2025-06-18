@@ -1,13 +1,24 @@
 {
   "manifest_version": 3,
   "name": "Suc",
-  "version": "0.3.1",
-  "description": "",
+  "version": "0.4.0",
+  "description": "Adds effects to GMail and blocks distracting websites.",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["*://mail.google.com/mail/*"],
       "js": ["content_script.js"]
     }
   ],
-  "permissions": ["storage"]
+  "action": {
+    "default_title": "Suc"
+  },
+  "options_page": "settings.html",
+  "icons": {
+      "128": "media/icon.png"
+  }
 }
