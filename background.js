@@ -16,6 +16,7 @@ async function loadState() {
     maxScore: 0,
     lastOffTimestamp: null,
   });
+  console.log(items);
   Object.assign(state, items);
   handleInitialState();
 }
@@ -142,6 +143,18 @@ chrome.runtime.onInstalled.addListener((details) => {
       maxScore: 0,
       lastOffTimestamp: null,
     });
+  }
+});
+
+// --- This is the new, corrected listener ---
+// It safely updates the in-memory state when changes are saved from other pages.
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === "sync") {
+    for (let [key, { newValue }] of Object.entries(changes)) {
+      if (state.hasOwnProperty(key)) {
+        state[key] = newValue;
+      }
+    }
   }
 });
 

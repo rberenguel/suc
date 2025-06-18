@@ -64,7 +64,9 @@
     if (blocker) blocker.remove();
   }
 
-  function handleBlockerClick() {
+  function handleBlockerClick(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
     clickCount++;
     if (clickCount >= 3) {
       removeBlocker();

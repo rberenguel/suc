@@ -7,6 +7,7 @@ function saveOptions() {
   const urls = urlsTextarea.value
     .split("\n")
     .filter((line) => line.trim() !== "");
+  console.log(urls);
   chrome.storage.sync.set({ blockedUrls: urls }, () => {
     statusDiv.textContent = "Options saved.";
     setTimeout(() => {
