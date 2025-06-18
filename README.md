@@ -10,7 +10,10 @@ Explosions on marking as read / archiving.
 
 https://github.com/user-attachments/assets/c40aea05-791e-4d28-b142-dadf06726956
 
-A distraction blocker that gives you a score for not disabling it.
+A distraction blocker that gives you a score for not disabling it. Points update regularly and bounce
+a bit. The gradient is slowly animated.
+
+![blocked](https://github.com/user-attachments/assets/ee8f59c9-f950-4200-818f-1e5b6ab0c21c)
 
 ## Reference material
 
