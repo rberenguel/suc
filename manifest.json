@@ -19,6 +19,12 @@
   },
   "options_page": "settings.html",
   "icons": {
-      "128": "media/icon.png"
-  }
+    "128": "media/icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["SixtyFour.woff2"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
