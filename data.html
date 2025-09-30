@@ -11,9 +11,13 @@
         background-color: #002b36; /* solarized base03 */
         color: #93a1a1; /* solarized base1 */
       }
-      h1 {
+      h1,
+      h2 {
         color: #268bd2; /* solarized blue */
         text-align: center;
+      }
+      h2 {
+        margin-top: 2em;
       }
       textarea {
         width: 100%;
@@ -25,7 +29,9 @@
         color: #93a1a1;
       }
       button,
-      select {
+      select,
+      input[type="text"] {
+        font-family: inherit;
         font-size: 1em;
         padding: 0.5em 1em;
         border: none;
@@ -35,7 +41,8 @@
         cursor: pointer;
         margin-right: 1em;
       }
-      select {
+      select,
+      input[type="text"] {
         background-color: #073642; /* solarized base02 */
         color: #93a1a1;
         border: 1px solid #586e75;
@@ -61,12 +68,31 @@
         color: #859900; /* solarized green */
         margin-left: 1em;
       }
+      /* NEW Theme Editor Styles */
+      #theme-editor {
+        font-size: 0.9em;
+      }
+      .theme-entry {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5em;
+        gap: 1em;
+      }
+      .theme-entry input {
+        width: 250px;
+      }
+      .theme-entry-details {
+        flex-grow: 1;
+        color: #657b83;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       /* Chart Styles */
       #chart-container {
         width: 100%;
-        max-height: 80vh;
         overflow-y: auto;
-        overflow-x: hidden;
+        overflow-x: auto;
         border: 1px solid #073642;
         border-radius: 5px;
       }
@@ -105,6 +131,9 @@
         color: #eee8d5;
         transition: opacity 0.2s;
       }
+      #theme-list a {
+        color: #990;
+      }
     </style>
   </head>
   <body>
@@ -115,7 +144,6 @@
       <button id="saveData" style="display: none">Save Data</button>
       <span id="status-notice"></span>
       <button id="exportDay">Export Day</button>
-      <!-- <button id="deleteDay" class="danger">Delete Day</button> -->
     </div>
 
     <div id="data-container" style="display: none">
@@ -124,7 +152,23 @@
 
     <br /><br />
     <button id="exportAll">Export All</button>
-    <!-- <button id="deleteAll" class="danger">Delete All Data</button> -->
+
+    <hr />
+    <h2>Theme Editor</h2>
+    <details>
+      <summary style="cursor: pointer; color: #268bd2"></summary>
+      <div id="theme-editor">
+        <p>
+          Assign a theme to a URL for this day. Leave empty for default
+          grouping.
+        </p>
+        <div id="theme-list"></div>
+        <datalist id="theme-suggestions"></datalist>
+        <br />
+        <button id="saveThemes">Save Themes</button>
+        <span id="theme-status" style="color: #859900; margin-left: 1em"></span>
+      </div>
+    </details>
 
     <hr />
 

@@ -8,43 +8,28 @@ const toggleDataButton = document.getElementById("toggleData");
 const dataContainer = document.getElementById("data-container");
 const saveDataButton = document.getElementById("saveData");
 const statusNotice = document.getElementById("status-notice");
+const themeList = document.getElementById("theme-list");
+const themeSuggestions = document.getElementById("theme-suggestions");
+const saveThemesButton = document.getElementById("saveThemes");
+const themeStatus = document.getElementById("theme-status");
 
 let productivityData = {};
-let settings = {}; // To hold settings from storage
+let settings = {};
+let themes = {};
 
-/**
- * Compacts consecutive data entries with the same content.
- * For any block of more than two identical consecutive entries, it keeps
- * only the first and the last entry.
- * @param {string[]} lines - An array of productivity data strings.
- * @returns {string[]} The compacted array of data strings.
- */
 function compactData(lines) {
-  if (!lines || lines.length < 2) {
-    return lines;
-  }
-
+  if (!lines || lines.length < 2) return lines;
   const compacted = [];
   let i = 0;
   while (i < lines.length) {
     const startLine = lines[i];
-    const startContent = startLine.substring(15); // Content for comparison
-
+    const startContent = startLine.substring(15);
     let j = i + 1;
-    while (j < lines.length && lines[j].substring(15) === startContent) {
-      j++;
-    }
-
+    while (j < lines.length && lines[j].substring(15) === startContent) j++;
     const blockEndIndex = j - 1;
-    compacted.push(startLine); // Always add the first line of a block
-
-    if (blockEndIndex > i) {
-      // If block has more than one line, add the last one.
-      // This compacts blocks of 3+ into 2, and leaves blocks of 2 as is.
-      compacted.push(lines[blockEndIndex]);
-    }
-
-    i = j; // Move to the start of the next block
+    compacted.push(startLine);
+    if (blockEndIndex > i) compacted.push(lines[blockEndIndex]);
+    i = j;
   }
   return compacted;
 }
@@ -58,7 +43,16 @@ function loadInitialData() {
 
 function loadProductivityData() {
   chrome.storage.local.get(null, (items) => {
-    productivityData = items;
+    productivityData = {};
+    themes = {};
+    for (const key in items) {
+      if (key.startsWith("themes_")) {
+        themes[key] = items[key];
+      } else {
+        productivityData[key] = items[key];
+      }
+    }
+
     const dates = Object.keys(productivityData).sort().reverse();
     dateSelector.innerHTML =
       dates
@@ -76,13 +70,65 @@ function loadProductivityData() {
   });
 }
 
+function renderThemeEditor(date) {
+  const dayThemes = themes[`themes_${date}`] || {};
+  const dataForDay = productivityData[date] || [];
+  //console.log(dataForDay)
+  // MODIFIED: This logic now groups all titles by URL to show every combination.
+  //console.log(dataForDay)
+  const titlesByUrl = dataForDay.reduce((acc, line) => {
+    let [_, ...mdLink] = line.split(" ");
+    mdLink = mdLink.join(" ");
+    let [title, ...url] = mdLink.split("]");
+    title = title.slice(1);
+    url = url[0].slice(1, -1);
+    const urlMatch = line.match(/\((.*?)\)$/);
+    const titleMatch = line.match(/\[(.*?)\]/);
+    if (urlMatch && titleMatch && urlMatch[1]) {
+      if (!acc[url]) {
+        acc[url] = new Set();
+      }
+      acc[url].add(title);
+    }
+    return acc;
+  }, {});
+  console.log(titlesByUrl);
+  const uniqueThemeNames = [
+    ...new Set(Object.values(dayThemes).filter(Boolean)),
+  ];
+
+  themeSuggestions.innerHTML = uniqueThemeNames
+    .map((name) => `<option value="${name}"></option>`)
+    .join("");
+
+  themeList.innerHTML = Object.entries(titlesByUrl)
+    .map(([url, titlesSet]) => {
+      const allTitles = Array.from(titlesSet);
+      const titlesHtml = allTitles.join("<br>");
+      const titlesTooltip = allTitles.join("\n");
+
+      return `
+        <div class="theme-entry">
+          <input type="text" list="theme-suggestions" data-url="${url}" value="${dayThemes[url] || ""}">
+          <span class="theme-entry-details" title="${url}\n${titlesTooltip}">
+            <strong><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></strong>
+            <br><small>${titlesHtml}</small>
+          </span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
 function displayDataForDate(date) {
   const rawDataForDay = date ? productivityData[date] || [] : [];
   const compactedDataForDay = compactData(rawDataForDay);
   const dataString = compactedDataForDay.join("\n");
+  const dayThemes = themes[`themes_${date}`] || {};
 
   productivityDataTextarea.value = dataString;
-  drawSwimlaneChart("#chart-container", dataString, true, settings);
+  renderThemeEditor(date);
+  drawSwimlaneChart("#chart-container", dataString, true, settings, dayThemes);
 }
 
 function download(filename, text) {
@@ -98,13 +144,56 @@ function download(filename, text) {
   document.body.removeChild(element);
 }
 
+saveThemesButton.addEventListener("click", () => {
+  const selectedDate = dateSelector.value;
+  if (!selectedDate) return;
+
+  const newDayThemes = {};
+  themeList.querySelectorAll("input[data-url]").forEach((input) => {
+    const url = input.dataset.url;
+    const theme = input.value.trim();
+    if (url && theme) {
+      newDayThemes[url] = theme;
+    }
+  });
+
+  const key = `themes_${selectedDate}`;
+  chrome.storage.local.set({ [key]: newDayThemes }, () => {
+    themes[key] = newDayThemes;
+    themeStatus.textContent = "Saved!";
+    setTimeout(() => (themeStatus.textContent = ""), 2000);
+    displayDataForDate(selectedDate); // Redraw chart with new themes
+  });
+});
+
+exportDayButton.addEventListener("click", () => {
+  const selectedDate = dateSelector.value;
+  if (!selectedDate || !productivityData[selectedDate]) return;
+
+  const dayThemes = themes[`themes_${selectedDate}`] || {};
+  let preamble = `# ${selectedDate}\n\n`;
+  if (Object.keys(dayThemes).length > 0) {
+    preamble +=
+      Object.entries(dayThemes)
+        .map(([url, theme]) => `- ${theme} ${url}`)
+        .join("\n") + "\n\n";
+  }
+  const content = preamble + productivityDataTextarea.value;
+  download(`suc-data-${selectedDate}.md`, content);
+});
+
+dateSelector.addEventListener("change", (e) =>
+  displayDataForDate(e.target.value),
+);
+document.addEventListener("DOMContentLoaded", loadInitialData);
+
+// Unchanged event listeners below this line
 toggleDataButton.addEventListener("click", () => {
   const isHidden = dataContainer.style.display === "none";
   dataContainer.style.display = isHidden ? "block" : "none";
   saveDataButton.style.display = isHidden ? "inline-block" : "none";
   toggleDataButton.textContent = isHidden ? "Hide Raw Data" : "Show Raw Data";
 });
-
 saveDataButton.addEventListener("click", () => {
   const selectedDate = dateSelector.value;
   if (selectedDate) {
@@ -113,47 +202,38 @@ saveDataButton.addEventListener("click", () => {
       .filter((line) => line.trim() !== "");
     chrome.storage.local.set({ [selectedDate]: updatedData }, () => {
       statusNotice.textContent = "Data saved!";
-      setTimeout(() => {
-        statusNotice.textContent = "";
-      }, 2000);
+      setTimeout(() => (statusNotice.textContent = ""), 2000);
       loadProductivityData();
     });
   }
 });
-
-exportDayButton.addEventListener("click", () => {
-  const selectedDate = dateSelector.value;
-  if (selectedDate && productivityData[selectedDate]) {
-    download(
-      `suc-data-${selectedDate}.md`,
-      productivityDataTextarea.value, // Export the compacted view
-    );
-  }
-});
-
 exportAllButton.addEventListener("click", () => {
   const allData = Object.keys(productivityData)
     .sort()
-    .map((date) => compactData(productivityData[date]).join("\n")) // Compact each day
-    .join("\n\n");
-  if (allData) {
-    download("suc-data-all.md", allData);
-  }
+    .map((date) => {
+      const dayThemes = themes[`themes_${date}`] || {};
+      let preamble = "";
+      if (Object.keys(dayThemes).length > 0) {
+        preamble =
+          Object.entries(dayThemes)
+            .map(([url, theme]) => `- ${theme} ${url}`)
+            .join("\n") + "\n\n";
+      }
+      return preamble + compactData(productivityData[date]).join("\n");
+    })
+    .join("\n\n---\n\n");
+  if (allData) download("suc-data-all.md", allData);
 });
-
-dateSelector.addEventListener("change", (e) =>
-  displayDataForDate(e.target.value),
-);
-
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {
+    const selectedDate = dateSelector.value;
+    const dayThemes = themes[`themes_${selectedDate}`] || {};
     drawSwimlaneChart(
       "#chart-container",
       productivityDataTextarea.value,
       false,
       settings,
+      dayThemes,
     );
   }
 });
-
-document.addEventListener("DOMContentLoaded", loadInitialData);

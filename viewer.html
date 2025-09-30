@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Suc Swimlane Viewer</title>
+    <meta charset="utf-8" />
+    <script src="lib/d3.v7.min.js"></script>
+    <style>
+      body {
+        font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+        max-width: 1400px;
+        margin: 2em auto;
+        background-color: #002b36;
+        color: #93a1a1;
+      }
+      h1 {
+        color: #268bd2;
+        text-align: center;
+      }
+      input[type="file"] {
+        display: block;
+        margin: 2em auto;
+        padding: 1em;
+        border: 1px solid #073642;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #chart-container {
+        width: 100%;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid #073642;
+        border-radius: 5px;
+        min-height: 100px;
+      }
+      .axis path,
+      .axis line {
+        stroke: #657b83;
+      }
+      .axis text {
+        fill: #93a1a1;
+        font-size: 12px;
+      }
+      .timeline-path {
+        stroke-width: 4px;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .lane-label {
+        fill: #93a1a1;
+        font-size: 11px;
+        text-anchor: middle;
+      }
+      #tooltip {
+        position: absolute;
+        opacity: 0;
+        background-color: #073642;
+        border: 1px solid #93a1a1;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 12px;
+        pointer-events: none;
+        color: #eee8d5;
+        transition: opacity 0.2s;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Swimlane Viewer</h1>
+    <input type="file" id="file-loader" accept=".md, .txt" />
+    <div id="chart-container"></div>
+    <div id="tooltip"></div>
+    <script type="module" src="viewer.js"></script>
+  </body>
+</html>
