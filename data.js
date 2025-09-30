@@ -3,11 +3,13 @@ import { drawSwimlaneChart } from "./swimlane.js";
 const dateSelector = document.getElementById("date-selector");
 const productivityDataTextarea = document.getElementById("productivity-data");
 const exportDayButton = document.getElementById("exportDay");
-const deleteDayButton = document.getElementById("deleteDay");
+//const deleteDayButton = document.getElementById("deleteDay");
 const exportAllButton = document.getElementById("exportAll");
-const deleteAllButton = document.getElementById("deleteAll");
+//const deleteAllButton = document.getElementById("deleteAll");
 const toggleDataButton = document.getElementById("toggleData");
 const dataContainer = document.getElementById("data-container");
+const saveDataButton = document.getElementById("saveData");
+const statusNotice = document.getElementById("status-notice");
 
 let productivityData = {};
 let settings = {}; // To hold settings from storage
@@ -33,14 +35,14 @@ function loadProductivityData() {
     if (dates.length > 0) {
       displayDataForDate(dates[0]);
       exportDayButton.disabled = false;
-      deleteDayButton.disabled = false;
+      //deleteDayButton.disabled = false;
     } else {
       displayDataForDate(null); // Clear textarea and chart if no data
       exportDayButton.disabled = true;
-      deleteDayButton.disabled = true;
+      //deleteDayButton.disabled = true;
     }
     exportAllButton.disabled = dates.length === 0;
-    deleteAllButton.disabled = dates.length === 0;
+    //deleteAllButton.disabled = dates.length === 0;
   });
 }
 
@@ -67,7 +69,22 @@ function download(filename, text) {
 toggleDataButton.addEventListener("click", () => {
   const isHidden = dataContainer.style.display === "none";
   dataContainer.style.display = isHidden ? "block" : "none";
+  saveDataButton.style.display = isHidden ? "inline-block" : "none";
   toggleDataButton.textContent = isHidden ? "Hide Raw Data" : "Show Raw Data";
+});
+
+saveDataButton.addEventListener("click", () => {
+  const selectedDate = dateSelector.value;
+  if (selectedDate) {
+    const updatedData = productivityDataTextarea.value.split("\n");
+    chrome.storage.local.set({ [selectedDate]: updatedData }, () => {
+      statusNotice.textContent = "Data saved!";
+      setTimeout(() => {
+        statusNotice.textContent = "";
+      }, 2000);
+      loadProductivityData();
+    });
+  }
 });
 
 exportDayButton.addEventListener("click", () => {
@@ -80,7 +97,7 @@ exportDayButton.addEventListener("click", () => {
   }
 });
 
-deleteDayButton.addEventListener("click", () => {
+/*deleteDayButton.addEventListener("click", () => {
   const selectedDate = dateSelector.value;
   if (
     selectedDate &&
@@ -90,7 +107,7 @@ deleteDayButton.addEventListener("click", () => {
       loadProductivityData();
     });
   }
-});
+});*/
 
 exportAllButton.addEventListener("click", () => {
   const allData = Object.keys(productivityData)
@@ -102,25 +119,17 @@ exportAllButton.addEventListener("click", () => {
   }
 });
 
-deleteAllButton.addEventListener("click", () => {
+/*deleteAllButton.addEventListener("click", () => {
   if (confirm("Are you sure you want to delete ALL productivity data?")) {
     chrome.storage.local.clear(() => {
       loadProductivityData();
     });
   }
-});
+});*/
 
 dateSelector.addEventListener("change", (e) =>
   displayDataForDate(e.target.value),
 );
-
-toggleDataButton.addEventListener("click", () => {
-  const isHidden = dataContainer.style.display === "none";
-  dataContainer.style.display = isHidden ? "block" : "none";
-  toggleDataButton.textContent = isHidden ? "Hide Raw Data" : "Show Raw Data";
-});
-
-// ... other listeners are unchanged ...
 
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {

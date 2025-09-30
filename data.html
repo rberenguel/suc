@@ -57,6 +57,10 @@
         border-top: 1px solid #073642;
         margin: 2em 0;
       }
+      #status-notice {
+        color: #859900; /* solarized green */
+        margin-left: 1em;
+      }
       /* Chart Styles */
       #chart-container {
         width: 100%;
@@ -108,17 +112,19 @@
     <div id="controls">
       <select id="date-selector"></select>
       <button id="toggleData">Show Raw Data</button>
+      <button id="saveData" style="display: none">Save Data</button>
+      <span id="status-notice"></span>
       <button id="exportDay">Export Day</button>
-      <button id="deleteDay" class="danger">Delete Day</button>
+      <!-- <button id="deleteDay" class="danger">Delete Day</button> -->
     </div>
 
     <div id="data-container" style="display: none">
-      <textarea id="productivity-data" readonly></textarea>
+      <textarea id="productivity-data"></textarea>
     </div>
 
     <br /><br />
     <button id="exportAll">Export All</button>
-    <button id="deleteAll" class="danger">Delete All Data</button>
+    <!-- <button id="deleteAll" class="danger">Delete All Data</button> -->
 
     <hr />
 
