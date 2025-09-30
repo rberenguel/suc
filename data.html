@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Suc Data</title>
+    <script src="lib/d3.v7.min.js"></script>
+    <style>
+      body {
+        font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+        max-width: 1400px;
+        margin: 2em auto;
+        background-color: #002b36; /* solarized base03 */
+        color: #93a1a1; /* solarized base1 */
+      }
+      h1 {
+        color: #268bd2; /* solarized blue */
+        text-align: center;
+      }
+      textarea {
+        width: 100%;
+        height: 400px;
+        margin-top: 0.5em;
+        border: 1px solid #073642;
+        border-radius: 4px;
+        background-color: #002b36;
+        color: #93a1a1;
+      }
+      button,
+      select {
+        font-size: 1em;
+        padding: 0.5em 1em;
+        border: none;
+        border-radius: 4px;
+        background-color: #268bd2; /* solarized blue */
+        color: #002b36;
+        cursor: pointer;
+        margin-right: 1em;
+      }
+      select {
+        background-color: #073642; /* solarized base02 */
+        color: #93a1a1;
+        border: 1px solid #586e75;
+      }
+      button:hover {
+        opacity: 0.9;
+      }
+      .danger {
+        background-color: #dc322f; /* solarized red */
+      }
+      #controls {
+        display: flex;
+        align-items: center;
+        gap: 1em;
+        margin-bottom: 1em;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid #073642;
+        margin: 2em 0;
+      }
+      /* Chart Styles */
+      #chart-container {
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border: 1px solid #073642;
+        border-radius: 5px;
+      }
+      .axis path,
+      .axis line {
+        stroke: #657b83;
+      }
+      .axis text {
+        fill: #93a1a1;
+        font-size: 12px;
+      }
+      .timeline-path {
+        stroke-width: 4px;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .data-point {
+        stroke: #002b36;
+        stroke-width: 2px;
+      }
+      .lane-label {
+        fill: #93a1a1;
+        font-size: 11px;
+        text-anchor: middle;
+      }
+      #tooltip {
+        position: absolute;
+        opacity: 0;
+        background-color: #073642;
+        border: 1px solid #93a1a1;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 12px;
+        pointer-events: none;
+        color: #eee8d5;
+        transition: opacity 0.2s;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Activity Data</h1>
+    <div id="controls">
+      <select id="date-selector"></select>
+      <button id="toggleData">Show Raw Data</button>
+      <button id="exportDay">Export Day</button>
+      <button id="deleteDay" class="danger">Delete Day</button>
+    </div>
+
+    <div id="data-container" style="display: none">
+      <textarea id="productivity-data" readonly></textarea>
+    </div>
+
+    <br /><br />
+    <button id="exportAll">Export All</button>
+    <button id="deleteAll" class="danger">Delete All Data</button>
+
+    <hr />
+
+    <h1>Activity Swimlane</h1>
+    <div id="chart-container"></div>
+    <div id="tooltip"></div>
+
+    <script type="module" src="data.js"></script>
+  </body>
+</html>

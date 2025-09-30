@@ -1,4 +1,5 @@
 const urlsTextarea = document.getElementById("urls");
+const groupedUrlsTextarea = document.getElementById("groupedUrls");
 const saveButton = document.getElementById("save");
 const resetButton = document.getElementById("resetScore");
 const statusDiv = document.getElementById("status");
@@ -7,18 +8,28 @@ function saveOptions() {
   const urls = urlsTextarea.value
     .split("\n")
     .filter((line) => line.trim() !== "");
-  console.log(urls);
-  chrome.storage.sync.set({ blockedUrls: urls }, () => {
-    statusDiv.textContent = "Options saved.";
-    setTimeout(() => {
-      statusDiv.textContent = "";
-    }, 1500);
-  });
+
+  const groupedUrls = groupedUrlsTextarea.value
+    .split("\n")
+    .filter((line) => line.trim() !== "");
+
+  // Saves both settings at the same time
+  chrome.storage.sync.set(
+    { blockedUrls: urls, groupedUrls: groupedUrls },
+    () => {
+      statusDiv.textContent = "Options saved.";
+      setTimeout(() => {
+        statusDiv.textContent = "";
+      }, 1500);
+    },
+  );
 }
 
 function restoreOptions() {
-  chrome.storage.sync.get({ blockedUrls: [] }, (items) => {
+  // Restores both settings when the page loads
+  chrome.storage.sync.get({ blockedUrls: [], groupedUrls: [] }, (items) => {
     urlsTextarea.value = items.blockedUrls.join("\n");
+    groupedUrlsTextarea.value = items.groupedUrls.join("\n");
   });
 }
 

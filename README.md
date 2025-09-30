@@ -1,4 +1,4 @@
-# Suc
+# <img src="media/icon.png" alt="Suc Icon" width="32" height="32"> Suc - Miscellaneous "productivity" additions to Chrome
 
 > #### Suc (Catalan; noun):
 >
@@ -14,6 +14,10 @@ A distraction blocker that gives you a score for not disabling it. Points update
 a bit. The gradient is slowly animated.
 
 ![blocked](https://github.com/user-attachments/assets/ee8f59c9-f950-4200-818f-1e5b6ab0c21c)
+
+Activity Tracker & Activity Swimlane
+
+Suc now includes a productivity tracker that logs your active tab every minute, providing a visual "swimlane" timeline of your daily activity. This new feature helps you understand your browsing patterns at a glance.
 
 ## Reference material
 
