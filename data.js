@@ -3,9 +3,7 @@ import { drawSwimlaneChart } from "./swimlane.js";
 const dateSelector = document.getElementById("date-selector");
 const productivityDataTextarea = document.getElementById("productivity-data");
 const exportDayButton = document.getElementById("exportDay");
-//const deleteDayButton = document.getElementById("deleteDay");
 const exportAllButton = document.getElementById("exportAll");
-//const deleteAllButton = document.getElementById("deleteAll");
 const toggleDataButton = document.getElementById("toggleData");
 const dataContainer = document.getElementById("data-container");
 const saveDataButton = document.getElementById("saveData");
@@ -14,11 +12,46 @@ const statusNotice = document.getElementById("status-notice");
 let productivityData = {};
 let settings = {}; // To hold settings from storage
 
+/**
+ * Compacts consecutive data entries with the same content.
+ * For any block of more than two identical consecutive entries, it keeps
+ * only the first and the last entry.
+ * @param {string[]} lines - An array of productivity data strings.
+ * @returns {string[]} The compacted array of data strings.
+ */
+function compactData(lines) {
+  if (!lines || lines.length < 2) {
+    return lines;
+  }
+
+  const compacted = [];
+  let i = 0;
+  while (i < lines.length) {
+    const startLine = lines[i];
+    const startContent = startLine.substring(15); // Content for comparison
+
+    let j = i + 1;
+    while (j < lines.length && lines[j].substring(15) === startContent) {
+      j++;
+    }
+
+    const blockEndIndex = j - 1;
+    compacted.push(startLine); // Always add the first line of a block
+
+    if (blockEndIndex > i) {
+      // If block has more than one line, add the last one.
+      // This compacts blocks of 3+ into 2, and leaves blocks of 2 as is.
+      compacted.push(lines[blockEndIndex]);
+    }
+
+    i = j; // Move to the start of the next block
+  }
+  return compacted;
+}
+
 function loadInitialData() {
-  // Fetch settings first
   chrome.storage.sync.get({ groupedUrls: [] }, (items) => {
     settings.groupedUrls = items.groupedUrls;
-    // Then fetch the productivity data
     loadProductivityData();
   });
 }
@@ -35,22 +68,21 @@ function loadProductivityData() {
     if (dates.length > 0) {
       displayDataForDate(dates[0]);
       exportDayButton.disabled = false;
-      //deleteDayButton.disabled = false;
     } else {
-      displayDataForDate(null); // Clear textarea and chart if no data
+      displayDataForDate(null);
       exportDayButton.disabled = true;
-      //deleteDayButton.disabled = true;
     }
     exportAllButton.disabled = dates.length === 0;
-    //deleteAllButton.disabled = dates.length === 0;
   });
 }
 
 function displayDataForDate(date) {
-  const dataForDay = date ? productivityData[date]?.join("\n") || "" : "";
-  productivityDataTextarea.value = dataForDay;
-  // Pass the fetched settings to the chart
-  drawSwimlaneChart("#chart-container", dataForDay, true, settings);
+  const rawDataForDay = date ? productivityData[date] || [] : [];
+  const compactedDataForDay = compactData(rawDataForDay);
+  const dataString = compactedDataForDay.join("\n");
+
+  productivityDataTextarea.value = dataString;
+  drawSwimlaneChart("#chart-container", dataString, true, settings);
 }
 
 function download(filename, text) {
@@ -76,7 +108,9 @@ toggleDataButton.addEventListener("click", () => {
 saveDataButton.addEventListener("click", () => {
   const selectedDate = dateSelector.value;
   if (selectedDate) {
-    const updatedData = productivityDataTextarea.value.split("\n");
+    const updatedData = productivityDataTextarea.value
+      .split("\n")
+      .filter((line) => line.trim() !== "");
     chrome.storage.local.set({ [selectedDate]: updatedData }, () => {
       statusNotice.textContent = "Data saved!";
       setTimeout(() => {
@@ -92,40 +126,20 @@ exportDayButton.addEventListener("click", () => {
   if (selectedDate && productivityData[selectedDate]) {
     download(
       `suc-data-${selectedDate}.md`,
-      productivityData[selectedDate].join("\n"),
+      productivityDataTextarea.value, // Export the compacted view
     );
   }
 });
 
-/*deleteDayButton.addEventListener("click", () => {
-  const selectedDate = dateSelector.value;
-  if (
-    selectedDate &&
-    confirm(`Are you sure you want to delete all data for ${selectedDate}?`)
-  ) {
-    chrome.storage.local.remove(selectedDate, () => {
-      loadProductivityData();
-    });
-  }
-});*/
-
 exportAllButton.addEventListener("click", () => {
   const allData = Object.keys(productivityData)
     .sort()
-    .map((date) => productivityData[date].join("\n"))
+    .map((date) => compactData(productivityData[date]).join("\n")) // Compact each day
     .join("\n\n");
   if (allData) {
     download("suc-data-all.md", allData);
   }
 });
-
-/*deleteAllButton.addEventListener("click", () => {
-  if (confirm("Are you sure you want to delete ALL productivity data?")) {
-    chrome.storage.local.clear(() => {
-      loadProductivityData();
-    });
-  }
-});*/
 
 dateSelector.addEventListener("change", (e) =>
   displayDataForDate(e.target.value),
@@ -133,7 +147,6 @@ dateSelector.addEventListener("change", (e) =>
 
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {
-    // Pass settings on resize as well
     drawSwimlaneChart(
       "#chart-container",
       productivityDataTextarea.value,
