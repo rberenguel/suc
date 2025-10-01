@@ -136,7 +136,9 @@ function render() {
   const svg = container
     .append("svg")
     .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("height", height + margin.top + margin.bottom);
+
+  const g = svg
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -153,8 +155,7 @@ function render() {
   const colorScale = d3.scaleOrdinal(solarizedColors).domain(lanes);
   const xScale = d3.scalePoint().domain(lanes).range([0, width]).padding(0.5);
 
-  svg
-    .append("g")
+  g.append("g")
     .attr("class", "axis")
     .call(
       d3
@@ -163,7 +164,7 @@ function render() {
         .tickFormat((d) => d3.timeFormat("%H:%M")(new Date(d))),
     );
 
-  const themeLanes = svg
+  const themeLanes = g
     .selectAll(".theme-lane")
     .data(laneData)
     .enter()
@@ -208,10 +209,6 @@ function render() {
       d3.select("#tooltip").style("opacity", 0);
     });
 
-  // REMOVED: Block for drawing folded lanes.
-
-  // REMOVED: Invisible rect for click handling.
-
   // Draw main lane title once at the top
   themeLanes
     .append("text")
@@ -222,7 +219,11 @@ function render() {
     .style("font-weight", "bold")
     .call(wrap, 100);
 
-  // REMOVED: Block for drawing repeated subgroup labels.
+  // Add zoom and pan
+  const zoom = d3.zoom().on("zoom", (event) => {
+    g.attr("transform", event.transform);
+  });
+  svg.call(zoom);
 }
 
 export function drawSwimlaneChart(
@@ -235,7 +236,6 @@ export function drawSwimlaneChart(
   currentContainerSelector = containerSelector;
   currentSettings = settings;
 
-  // MODIFIED: Folding is removed, so foldedLanes is always reset to empty.
   if (resetState) {
     foldedLanes = new Set();
   }
@@ -288,8 +288,6 @@ export function drawSwimlaneChart(
     .sort((a, b) => a.time - b.time);
 
   currentProcessedData = processedData;
-
-  // REMOVED: Logic to set all lanes to folded by default.
 
   render();
 }

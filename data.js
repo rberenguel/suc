@@ -12,6 +12,7 @@ const themeList = document.getElementById("theme-list");
 const themeSuggestions = document.getElementById("theme-suggestions");
 const saveThemesButton = document.getElementById("saveThemes");
 const themeStatus = document.getElementById("theme-status");
+const exportPdfButton = document.getElementById("exportPdf");
 
 let productivityData = {};
 let settings = {};
@@ -180,6 +181,32 @@ exportDayButton.addEventListener("click", () => {
   }
   const content = preamble + productivityDataTextarea.value;
   download(`suc-data-${selectedDate}.md`, content);
+});
+
+exportPdfButton.addEventListener("click", async () => {
+  const { jsPDF } = window.jspdf;
+  const svgElement = document.querySelector("#chart-container svg");
+  if (!svgElement) {
+    alert("No chart to export!");
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const svgXML = new XMLSerializer().serializeToString(svgElement);
+
+  const v = await window.Canvg.fromString(ctx, svgXML);
+  await v.render();
+
+  const imgData = canvas.toDataURL("image/png");
+  const pdf = new jsPDF({
+    orientation: "landscape",
+  });
+
+  const selectedDate = dateSelector.value;
+  pdf.text(`Activity Swimlane for ${selectedDate}`, 10, 10);
+  pdf.addImage(imgData, "PNG", 10, 20, 280, 150);
+  pdf.save(`suc-swimlane-${selectedDate}.pdf`);
 });
 
 dateSelector.addEventListener("change", (e) =>

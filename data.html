@@ -3,6 +3,8 @@
   <head>
     <title>Suc Data</title>
     <script src="lib/d3.v7.min.js"></script>
+    <script src="lib/jspdf.min.js"></script>
+    <script src="lib/canvg.min.js"></script>
     <style>
       body {
         font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -144,6 +146,7 @@
       <button id="saveData" style="display: none">Save Data</button>
       <span id="status-notice"></span>
       <button id="exportDay">Export Day</button>
+      <button id="exportPdf">Export to PDF</button>
     </div>
 
     <div id="data-container" style="display: none">
