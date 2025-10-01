@@ -38,7 +38,7 @@ export async function drawSwimlaneChart(
       .text("No data to display for this day.");
     return {};
   }
-  
+
   const processedData = data
     .map((entry) => {
       const theme = themes[entry.url] || null;
@@ -64,15 +64,16 @@ export async function drawSwimlaneChart(
     })
     .sort((a, b) => a.time - b.time);
 
-  const groupedByLane = d3.group(
-    processedData,
-    (d) => d.theme || d.title,
-  );
+  const groupedByLane = d3.group(processedData, (d) => d.theme || d.title);
 
   const laneData = Array.from(groupedByLane, ([laneName, entries]) => {
     const subGroups = entries.reduce((acc, currentEvent, index) => {
       if (index === 0) {
-        acc.push({ title: currentEvent.title, url: currentEvent.url, events: [currentEvent] });
+        acc.push({
+          title: currentEvent.title,
+          url: currentEvent.url,
+          events: [currentEvent],
+        });
         return acc;
       }
       const prevEvent = entries[index - 1];
@@ -86,7 +87,11 @@ export async function drawSwimlaneChart(
       ) {
         lastGroup.events.push(currentEvent);
       } else {
-        acc.push({ title: currentEvent.title, url: currentEvent.url, events: [currentEvent] });
+        acc.push({
+          title: currentEvent.title,
+          url: currentEvent.url,
+          events: [currentEvent],
+        });
       }
       return acc;
     }, []);
@@ -161,13 +166,21 @@ export async function drawSwimlaneChart(
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const solarizedColors = [
-    "#b58900", "#cb4b16", "#dc322f", "#d33682",
-    "#6c71c4", "#268bd2", "#2aa198", "#859900",
+    "#b58900",
+    "#cb4b16",
+    "#dc322f",
+    "#d33682",
+    "#6c71c4",
+    "#268bd2",
+    "#2aa198",
+    "#859900",
   ];
   const colorScale = d3.scaleOrdinal(solarizedColors).domain(lanes);
   const colorMap = {};
-  lanes.forEach(lane => { colorMap[lane] = colorScale(lane); });
-  
+  lanes.forEach((lane) => {
+    colorMap[lane] = colorScale(lane);
+  });
+
   const xScale = d3.scalePoint().domain(lanes).range([0, width]).padding(0.2); // Tighter padding
 
   g.append("g")
@@ -201,10 +214,12 @@ export async function drawSwimlaneChart(
     .on("mouseover", (event, d) => {
       const tooltip = d3.select("#tooltip");
       const startTime = d.events[0].time.toLocaleTimeString([], {
-        hour: "2-digit", minute: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
       });
       const endTime = d.events[d.events.length - 1].time.toLocaleTimeString(
-        [], { hour: "2-digit", minute: "2-digit" },
+        [],
+        { hour: "2-digit", minute: "2-digit" },
       );
       tooltip
         .style("opacity", 0.95)
@@ -222,7 +237,8 @@ export async function drawSwimlaneChart(
     text.each(function () {
       const textNode = d3.select(this);
       const words = textNode.text().split(/\s+/).reverse();
-      let word, line = [];
+      let word,
+        line = [];
       const lineHeight = 1.1;
       const x = textNode.attr("x");
       const y = textNode.attr("y");
@@ -257,6 +273,6 @@ export async function drawSwimlaneChart(
     g.attr("transform", event.transform);
   });
   svg.call(zoom);
-  
+
   return colorMap;
 }

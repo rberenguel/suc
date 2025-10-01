@@ -109,7 +109,7 @@ function renderDurations(durations, colorMap) {
       const formattedTime = `${String(hours).padStart(2, "0")}:${String(
         mins,
       ).padStart(2, "0")}`;
-      const color = colorMap[theme] || '#2aa198'; // Default color if not found
+      const color = colorMap[theme] || "#2aa198"; // Default color if not found
       return `<div class="duration-item"><span class="duration-item-theme" style="color: ${color}">${theme}:</span> ${formattedTime}</div>`;
     })
     .join("");
@@ -254,7 +254,9 @@ exportDayButton.addEventListener("click", () => {
   const processedData = processDailyData(dataString, dayThemes, settings);
   const durations = calculateDurations(processedData);
 
-  const sortedDurations = Object.entries(durations).sort(([, a], [, b]) => b - a);
+  const sortedDurations = Object.entries(durations).sort(
+    ([, a], [, b]) => b - a,
+  );
   const totalsPreamble = sortedDurations
     .map(([theme, minutes]) => {
       const hours = Math.floor(minutes / 60);

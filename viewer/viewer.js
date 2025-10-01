@@ -1,4 +1,4 @@
-import { drawSwimlaneChart } from "./swimlane.js";
+import { drawSwimlaneChart } from "../swimlane.js";
 
 const fileLoader = document.getElementById("file-loader");
 const mainHeader = document.getElementById("main-header");
