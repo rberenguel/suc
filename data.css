@@ -1,0 +1,167 @@
+/* General Body & Text Styles */
+body {
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  max-width: 90vw;
+  margin: 2em auto;
+  background-color: #000b06;
+  color: #a3c1c1;
+}
+
+h1,
+h2 {
+  color: #268bd2;
+  text-align: center;
+}
+
+h2 {
+  margin-top: 2em;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #073642;
+  margin: 2em 0;
+}
+
+/* Form & Control Styles */
+textarea {
+  width: 100%;
+  height: 400px;
+  margin-top: 0.5em;
+  border: 1px solid #073642;
+  border-radius: 4px;
+  background-color: #000b06;
+  color: #93a1a1;
+}
+
+button,
+select,
+input[type="text"] {
+  font-family: inherit;
+  font-size: 1em;
+  padding: 0.5em 1em;
+  border: none;
+  border-radius: 4px;
+  background-color: #268bd2;
+  color: #002b36;
+  cursor: pointer;
+  margin-right: 1em;
+}
+
+select,
+input[type="text"] {
+  background-color: #073642;
+  color: #93a1a1;
+  border: 1px solid #586e75;
+}
+
+input[type="file"] {
+  display: block;
+  margin: 2em auto;
+  padding: 1em;
+  border: 1px solid #073642;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* Layout & Specific Element Styles */
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-bottom: 1em;
+}
+
+#status-notice,
+#theme-status {
+  color: #859900;
+  margin-left: 1em;
+}
+
+/* Theme Editor Styles */
+#theme-editor {
+  font-size: 0.9em;
+}
+.theme-entry {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+  gap: 1em;
+}
+.theme-entry input {
+  width: 250px;
+}
+.theme-entry-details {
+  flex-grow: 1;
+  color: #657b83;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#theme-list a {
+  color: #990;
+}
+
+/* Chart & Tooltip Styles */
+#chart-container {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #073642;
+  border-radius: 5px;
+  min-height: 100px;
+}
+.axis path,
+.axis line {
+  stroke: #657b83;
+}
+.axis text {
+  fill: #93a1a1;
+  font-size: 12px;
+}
+.timeline-path {
+  stroke-width: 4px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lane-label {
+  fill: #93a1a1;
+  font-size: 11px;
+  text-anchor: middle;
+}
+#tooltip {
+  position: absolute;
+  opacity: 0;
+  background-color: #073642;
+  border: 1px solid #93a1a1;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 12px;
+  pointer-events: none;
+  color: #eee8d5;
+  transition: opacity 0.2s;
+}
+
+/* Duration Summary Styles */
+#duration-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  justify-content: center;
+  padding: 1em 0;
+  margin-bottom: 1em;
+}
+.duration-item {
+  background: #073642;
+  padding: 0.5em 1em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.duration-item-theme {
+  font-weight: bold;
+}

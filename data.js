@@ -12,7 +12,7 @@ const themeList = document.getElementById("theme-list");
 const themeSuggestions = document.getElementById("theme-suggestions");
 const saveThemesButton = document.getElementById("saveThemes");
 const themeStatus = document.getElementById("theme-status");
-const exportPdfButton = document.getElementById("exportPdf");
+const durationSummaryContainer = document.getElementById("duration-summary");
 
 let productivityData = {};
 let settings = {};
@@ -35,6 +35,86 @@ function compactData(lines) {
   return compacted;
 }
 
+function processDailyData(rawDataString, themesForDay, globalSettings) {
+  const parseLine = (line) => {
+    const match = line.match(/^(\d{8}@\d{2}:\d{2})\s\[(.*?)\](?:\((.*?)\))?$/);
+    if (!match) return null;
+    const [_, datetimeStr, title, url = ""] = match;
+    const year = parseInt(datetimeStr.substring(0, 4), 10);
+    const month = parseInt(datetimeStr.substring(4, 6), 10) - 1;
+    const day = parseInt(datetimeStr.substring(6, 8), 10);
+    const hour = parseInt(datetimeStr.substring(9, 11), 10);
+    const minute = parseInt(datetimeStr.substring(12, 14), 10);
+    return {
+      time: new Date(year, month, day, hour, minute),
+      title: title.trim(),
+      url: url,
+    };
+  };
+
+  const data = (rawDataString || "")
+    .trim()
+    .split("\n")
+    .map(parseLine)
+    .filter(Boolean);
+
+  return data.map((entry) => {
+    const theme = themesForDay[entry.url] || null;
+    if (
+      !entry.url ||
+      !globalSettings.groupedUrls ||
+      globalSettings.groupedUrls.length === 0
+    ) {
+      return { ...entry, theme };
+    }
+    const matchingPrefix = globalSettings.groupedUrls.find((prefix) =>
+      entry.url.startsWith(prefix),
+    );
+    if (matchingPrefix) {
+      try {
+        const hostname = new URL(matchingPrefix).hostname;
+        return { ...entry, title: hostname, theme };
+      } catch (e) {
+        return { ...entry, title: matchingPrefix, theme };
+      }
+    }
+    return { ...entry, theme };
+  });
+}
+
+function calculateDurations(processedData) {
+  const durations = new Map();
+  for (const entry of processedData) {
+    const key = entry.theme || entry.title;
+    durations.set(key, (durations.get(key) || 0) + 1);
+  }
+  return Object.fromEntries(durations);
+}
+
+function renderDurations(durations, colorMap) {
+  const sortedDurations = Object.entries(durations)
+    .filter(([_, minutes]) => minutes > 15)
+    .sort(([, a], [, b]) => b - a);
+
+  if (sortedDurations.length === 0) {
+    durationSummaryContainer.innerHTML =
+      "<p>No themes used for more than 15 minutes today.</p>";
+    return;
+  }
+
+  durationSummaryContainer.innerHTML = sortedDurations
+    .map(([theme, minutes]) => {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const formattedTime = `${String(hours).padStart(2, "0")}:${String(
+        mins,
+      ).padStart(2, "0")}`;
+      const color = colorMap[theme] || '#2aa198'; // Default color if not found
+      return `<div class="duration-item"><span class="duration-item-theme" style="color: ${color}">${theme}:</span> ${formattedTime}</div>`;
+    })
+    .join("");
+}
+
 function loadInitialData() {
   chrome.storage.sync.get({ groupedUrls: [] }, (items) => {
     settings.groupedUrls = items.groupedUrls;
@@ -53,13 +133,11 @@ function loadProductivityData() {
         productivityData[key] = items[key];
       }
     }
-
     const dates = Object.keys(productivityData).sort().reverse();
     dateSelector.innerHTML =
       dates
         .map((date) => `<option value="${date}">${date}</option>`)
         .join("") || `<option>No data available</option>`;
-
     if (dates.length > 0) {
       displayDataForDate(dates[0]);
       exportDayButton.disabled = false;
@@ -74,9 +152,6 @@ function loadProductivityData() {
 function renderThemeEditor(date) {
   const dayThemes = themes[`themes_${date}`] || {};
   const dataForDay = productivityData[date] || [];
-  //console.log(dataForDay)
-  // MODIFIED: This logic now groups all titles by URL to show every combination.
-  //console.log(dataForDay)
   const titlesByUrl = dataForDay.reduce((acc, line) => {
     let [_, ...mdLink] = line.split(" ");
     mdLink = mdLink.join(" ");
@@ -86,28 +161,22 @@ function renderThemeEditor(date) {
     const urlMatch = line.match(/\((.*?)\)$/);
     const titleMatch = line.match(/\[(.*?)\]/);
     if (urlMatch && titleMatch && urlMatch[1]) {
-      if (!acc[url]) {
-        acc[url] = new Set();
-      }
+      if (!acc[url]) acc[url] = new Set();
       acc[url].add(title);
     }
     return acc;
   }, {});
-  console.log(titlesByUrl);
   const uniqueThemeNames = [
     ...new Set(Object.values(dayThemes).filter(Boolean)),
   ];
-
   themeSuggestions.innerHTML = uniqueThemeNames
     .map((name) => `<option value="${name}"></option>`)
     .join("");
-
   themeList.innerHTML = Object.entries(titlesByUrl)
     .map(([url, titlesSet]) => {
       const allTitles = Array.from(titlesSet);
       const titlesHtml = allTitles.join("<br>");
       const titlesTooltip = allTitles.join("\n");
-
       return `
         <div class="theme-entry">
           <input type="text" list="theme-suggestions" data-url="${url}" value="${dayThemes[url] || ""}">
@@ -115,21 +184,32 @@ function renderThemeEditor(date) {
             <strong><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></strong>
             <br><small>${titlesHtml}</small>
           </span>
-        </div>
-      `;
+        </div>`;
     })
     .join("");
 }
 
-function displayDataForDate(date) {
+async function displayDataForDate(date) {
   const rawDataForDay = date ? productivityData[date] || [] : [];
   const compactedDataForDay = compactData(rawDataForDay);
   const dataString = compactedDataForDay.join("\n");
   const dayThemes = themes[`themes_${date}`] || {};
 
+  const processedData = processDailyData(dataString, dayThemes, settings);
+  const durations = calculateDurations(processedData);
+
+  // Draw chart first to get the colorMap
+  const colorMap = await drawSwimlaneChart(
+    "#chart-container",
+    dataString,
+    true,
+    settings,
+    dayThemes,
+  );
+  renderDurations(durations, colorMap);
+
   productivityDataTextarea.value = dataString;
   renderThemeEditor(date);
-  drawSwimlaneChart("#chart-container", dataString, true, settings, dayThemes);
 }
 
 function download(filename, text) {
@@ -153,9 +233,7 @@ saveThemesButton.addEventListener("click", () => {
   themeList.querySelectorAll("input[data-url]").forEach((input) => {
     const url = input.dataset.url;
     const theme = input.value.trim();
-    if (url && theme) {
-      newDayThemes[url] = theme;
-    }
+    if (url && theme) newDayThemes[url] = theme;
   });
 
   const key = `themes_${selectedDate}`;
@@ -163,7 +241,7 @@ saveThemesButton.addEventListener("click", () => {
     themes[key] = newDayThemes;
     themeStatus.textContent = "Saved!";
     setTimeout(() => (themeStatus.textContent = ""), 2000);
-    displayDataForDate(selectedDate); // Redraw chart with new themes
+    displayDataForDate(selectedDate);
   });
 });
 
@@ -172,41 +250,37 @@ exportDayButton.addEventListener("click", () => {
   if (!selectedDate || !productivityData[selectedDate]) return;
 
   const dayThemes = themes[`themes_${selectedDate}`] || {};
-  let preamble = `# ${selectedDate}\n\n`;
-  if (Object.keys(dayThemes).length > 0) {
-    preamble +=
-      Object.entries(dayThemes)
-        .map(([url, theme]) => `- ${theme} ${url}`)
-        .join("\n") + "\n\n";
-  }
-  const content = preamble + productivityDataTextarea.value;
+  const dataString = productivityDataTextarea.value;
+  const processedData = processDailyData(dataString, dayThemes, settings);
+  const durations = calculateDurations(processedData);
+
+  const sortedDurations = Object.entries(durations).sort(([, a], [, b]) => b - a);
+  const totalsPreamble = sortedDurations
+    .map(([theme, minutes]) => {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const formattedTime = `${String(hours).padStart(2, "0")}:${String(
+        mins,
+      ).padStart(2, "0")}`;
+      return `- [total] ${formattedTime} ${theme}`;
+    })
+    .join("\n");
+
+  const themePreamble =
+    Object.keys(dayThemes).length > 0
+      ? Object.entries(dayThemes)
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([url, theme]) => `- ${theme} ${url}`)
+          .join("\n")
+      : "";
+
+  const content =
+    `# ${selectedDate}\n\n` +
+    `${totalsPreamble ? totalsPreamble + "\n\n" : ""}` +
+    `${themePreamble ? themePreamble + "\n\n" : ""}` +
+    dataString;
+
   download(`suc-data-${selectedDate}.md`, content);
-});
-
-exportPdfButton.addEventListener("click", async () => {
-  const { jsPDF } = window.jspdf;
-  const svgElement = document.querySelector("#chart-container svg");
-  if (!svgElement) {
-    alert("No chart to export!");
-    return;
-  }
-
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  const svgXML = new XMLSerializer().serializeToString(svgElement);
-
-  const v = await window.Canvg.fromString(ctx, svgXML);
-  await v.render();
-
-  const imgData = canvas.toDataURL("image/png");
-  const pdf = new jsPDF({
-    orientation: "landscape",
-  });
-
-  const selectedDate = dateSelector.value;
-  pdf.text(`Activity Swimlane for ${selectedDate}`, 10, 10);
-  pdf.addImage(imgData, "PNG", 10, 20, 280, 150);
-  pdf.save(`suc-swimlane-${selectedDate}.pdf`);
 });
 
 dateSelector.addEventListener("change", (e) =>
@@ -214,13 +288,13 @@ dateSelector.addEventListener("change", (e) =>
 );
 document.addEventListener("DOMContentLoaded", loadInitialData);
 
-// Unchanged event listeners below this line
 toggleDataButton.addEventListener("click", () => {
   const isHidden = dataContainer.style.display === "none";
   dataContainer.style.display = isHidden ? "block" : "none";
   saveDataButton.style.display = isHidden ? "inline-block" : "none";
   toggleDataButton.textContent = isHidden ? "Hide Raw Data" : "Show Raw Data";
 });
+
 saveDataButton.addEventListener("click", () => {
   const selectedDate = dateSelector.value;
   if (selectedDate) {
@@ -234,6 +308,7 @@ saveDataButton.addEventListener("click", () => {
     });
   }
 });
+
 exportAllButton.addEventListener("click", () => {
   const allData = Object.keys(productivityData)
     .sort()
@@ -251,6 +326,7 @@ exportAllButton.addEventListener("click", () => {
     .join("\n\n---\n\n");
   if (allData) download("suc-data-all.md", allData);
 });
+
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {
     const selectedDate = dateSelector.value;

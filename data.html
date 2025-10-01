@@ -1,142 +1,9 @@
 <!doctype html>
 <html>
   <head>
-    <title>Suc Data</title>
+    <title>Suc: Activity Data</title>
     <script src="lib/d3.v7.min.js"></script>
-    <script src="lib/jspdf.min.js"></script>
-    <script src="lib/canvg.min.js"></script>
-    <style>
-      body {
-        font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
-        max-width: 1400px;
-        margin: 2em auto;
-        background-color: #002b36; /* solarized base03 */
-        color: #93a1a1; /* solarized base1 */
-      }
-      h1,
-      h2 {
-        color: #268bd2; /* solarized blue */
-        text-align: center;
-      }
-      h2 {
-        margin-top: 2em;
-      }
-      textarea {
-        width: 100%;
-        height: 400px;
-        margin-top: 0.5em;
-        border: 1px solid #073642;
-        border-radius: 4px;
-        background-color: #002b36;
-        color: #93a1a1;
-      }
-      button,
-      select,
-      input[type="text"] {
-        font-family: inherit;
-        font-size: 1em;
-        padding: 0.5em 1em;
-        border: none;
-        border-radius: 4px;
-        background-color: #268bd2; /* solarized blue */
-        color: #002b36;
-        cursor: pointer;
-        margin-right: 1em;
-      }
-      select,
-      input[type="text"] {
-        background-color: #073642; /* solarized base02 */
-        color: #93a1a1;
-        border: 1px solid #586e75;
-      }
-      button:hover {
-        opacity: 0.9;
-      }
-      .danger {
-        background-color: #dc322f; /* solarized red */
-      }
-      #controls {
-        display: flex;
-        align-items: center;
-        gap: 1em;
-        margin-bottom: 1em;
-      }
-      hr {
-        border: none;
-        border-top: 1px solid #073642;
-        margin: 2em 0;
-      }
-      #status-notice {
-        color: #859900; /* solarized green */
-        margin-left: 1em;
-      }
-      /* NEW Theme Editor Styles */
-      #theme-editor {
-        font-size: 0.9em;
-      }
-      .theme-entry {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.5em;
-        gap: 1em;
-      }
-      .theme-entry input {
-        width: 250px;
-      }
-      .theme-entry-details {
-        flex-grow: 1;
-        color: #657b83;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      /* Chart Styles */
-      #chart-container {
-        width: 100%;
-        overflow-y: auto;
-        overflow-x: auto;
-        border: 1px solid #073642;
-        border-radius: 5px;
-      }
-      .axis path,
-      .axis line {
-        stroke: #657b83;
-      }
-      .axis text {
-        fill: #93a1a1;
-        font-size: 12px;
-      }
-      .timeline-path {
-        stroke-width: 4px;
-        fill: none;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .data-point {
-        stroke: #002b36;
-        stroke-width: 2px;
-      }
-      .lane-label {
-        fill: #93a1a1;
-        font-size: 11px;
-        text-anchor: middle;
-      }
-      #tooltip {
-        position: absolute;
-        opacity: 0;
-        background-color: #073642;
-        border: 1px solid #93a1a1;
-        border-radius: 5px;
-        padding: 10px;
-        font-size: 12px;
-        pointer-events: none;
-        color: #eee8d5;
-        transition: opacity 0.2s;
-      }
-      #theme-list a {
-        color: #990;
-      }
-    </style>
+    <link rel="stylesheet" href="data.css" />
   </head>
   <body>
     <h1>Activity Data</h1>
@@ -146,7 +13,6 @@
       <button id="saveData" style="display: none">Save Data</button>
       <span id="status-notice"></span>
       <button id="exportDay">Export Day</button>
-      <button id="exportPdf">Export to PDF</button>
     </div>
 
     <div id="data-container" style="display: none">
@@ -174,7 +40,10 @@
     </details>
 
     <hr />
-
+    
+    <h2>Daily Summary</h2>
+    <div id="duration-summary"></div>
+    
     <h1>Activity Swimlane</h1>
     <div id="chart-container"></div>
     <div id="tooltip"></div>
