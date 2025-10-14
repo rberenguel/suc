@@ -84,10 +84,32 @@ function processDailyData(rawDataString, themesForDay, globalSettings) {
 
 function calculateDurations(processedData) {
   const durations = new Map();
-  for (const entry of processedData) {
-    const key = entry.theme || entry.title;
-    durations.set(key, (durations.get(key) || 0) + 1);
+  if (processedData.length < 2) {
+    // If there's only one entry, we can't calculate a duration from it.
+    // We can either assume 1 minute or 0. Let's assume 1 to be consistent
+    // with the old behavior in this edge case.
+    if (processedData.length === 1) {
+        const key = processedData[0].theme || processedData[0].title;
+        durations.set(key, 1);
+    }
+    return Object.fromEntries(durations);
   }
+
+  for (let i = 0; i < processedData.length - 1; i++) {
+    const currentEntry = processedData[i];
+    const nextEntry = processedData[i + 1];
+    const key = currentEntry.theme || currentEntry.title;
+    
+    // Calculate the difference in minutes between the current and next log entry
+    const durationMinutes = (nextEntry.time - currentEntry.time) / (1000 * 60);
+
+    // If the duration is very long (e.g., overnight), it's a real duration.
+    // If it's 0, it means two events happened in the same minute, we can count it as 1 minute of the first event.
+    const effectiveDuration = durationMinutes > 0 ? durationMinutes : 1;
+
+    durations.set(key, (durations.get(key) || 0) + effectiveDuration);
+  }
+
   return Object.fromEntries(durations);
 }
 
