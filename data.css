@@ -23,6 +23,10 @@ hr {
   margin: 2em 0;
 }
 
+span.date {
+  color: #c60;
+}
+
 /* Form & Control Styles */
 textarea {
   width: 100%;

@@ -1,3 +1,26 @@
+export const parseLine = (line) => {
+  let split = line.split(" ");
+  const dateBlock = split[0];
+  const urlBlock = split.slice(1).join(" ");
+  const datetimeMatch = dateBlock.match(/^(\d{8}@\d{2}:\d{2})/);
+  if (!datetimeMatch) return null;
+  if (!urlBlock) return null;
+  split = urlBlock.split("]");
+  const title = split[0].slice(1);
+  const url = split.slice(1).join("]").slice(1, -1);
+  const [_, datetimeStr] = datetimeMatch;
+  const year = parseInt(datetimeStr.substring(0, 4), 10);
+  const month = parseInt(datetimeStr.substring(4, 6), 10) - 1;
+  const day = parseInt(datetimeStr.substring(6, 8), 10);
+  const hour = parseInt(datetimeStr.substring(9, 11), 10);
+  const minute = parseInt(datetimeStr.substring(12, 14), 10);
+  return {
+    time: new Date(year, month, day, hour, minute),
+    title: title.trim(),
+    url: url,
+  };
+};
+
 export async function drawSwimlaneChart(
   containerSelector,
   rawData,
@@ -7,22 +30,6 @@ export async function drawSwimlaneChart(
 ) {
   const container = d3.select(containerSelector);
   container.html(""); // Clear previous content
-
-  const parseLine = (line) => {
-    const match = line.match(/^(\d{8}@\d{2}:\d{2})\s\[(.*?)\](?:\((.*?)\))?$/);
-    if (!match) return null;
-    const [_, datetimeStr, title, url = ""] = match;
-    const year = parseInt(datetimeStr.substring(0, 4), 10);
-    const month = parseInt(datetimeStr.substring(4, 6), 10) - 1;
-    const day = parseInt(datetimeStr.substring(6, 8), 10);
-    const hour = parseInt(datetimeStr.substring(9, 11), 10);
-    const minute = parseInt(datetimeStr.substring(12, 14), 10);
-    return {
-      time: new Date(year, month, day, hour, minute),
-      title: title.trim(),
-      url: url,
-    };
-  };
 
   const data = (rawData || "")
     .trim()

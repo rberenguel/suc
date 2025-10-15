@@ -1,7 +1,8 @@
-import { drawSwimlaneChart } from "./swimlane.js";
+import { drawSwimlaneChart, parseLine } from "./swimlane.js";
 
 const dateSelector = document.getElementById("date-selector-options");
 const dateSelectorButton = document.getElementById("date-selector-button");
+const dailySummaryTitle = document.getElementById("summary-title");
 const productivityDataTextarea = document.getElementById("productivity-data");
 const exportDayButton = document.getElementById("exportDay");
 const exportSelectedButton = document.getElementById("exportSelected");
@@ -40,22 +41,6 @@ function compactData(lines) {
 }
 
 function processDailyData(rawDataString, themesForDay, globalSettings) {
-  const parseLine = (line) => {
-    const match = line.match(/^(\d{8}@\d{2}:\d{2})\s\[(.*?)\](?:\((.*?)\))?$/);
-    if (!match) return null;
-    const [_, datetimeStr, title, url = ""] = match;
-    const year = parseInt(datetimeStr.substring(0, 4), 10);
-    const month = parseInt(datetimeStr.substring(4, 6), 10) - 1;
-    const day = parseInt(datetimeStr.substring(6, 8), 10);
-    const hour = parseInt(datetimeStr.substring(9, 11), 10);
-    const minute = parseInt(datetimeStr.substring(12, 14), 10);
-    return {
-      time: new Date(year, month, day, hour, minute),
-      title: title.trim(),
-      url: url,
-    };
-  };
-
   const data = (rawDataString || "")
     .trim()
     .split("\n")
@@ -207,11 +192,17 @@ function renderThemeEditor(date) {
   const dayThemes = themes[`themes_${date}`] || {};
   const dataForDay = productivityData[date] || [];
   const titlesByUrl = dataForDay.reduce((acc, line) => {
-    const urlMatch = line.match(/\((.*?)\)$/);
-    const titleMatch = line.match(/\[(.*?)\]/);
-    if (urlMatch && titleMatch && urlMatch[1]) {
-      const url = urlMatch[1];
-      const title = titleMatch[1];
+    const urlBlockIndex = line.indexOf(" [");
+    if (urlBlockIndex === -1) return acc;
+
+    const urlBlock = line.substring(urlBlockIndex + 1);
+    const lastParenIndex = urlBlock.lastIndexOf("(");
+    if (lastParenIndex === -1) return acc;
+
+    const url = urlBlock.substring(lastParenIndex + 1, urlBlock.length - 1);
+    const title = urlBlock.substring(1, lastParenIndex - 2).trim();
+
+    if (url && title) {
       if (!acc[url]) acc[url] = new Set();
       acc[url].add(title);
     }
@@ -246,6 +237,8 @@ function renderThemeEditor(date) {
 
 async function displayDataForDate(date) {
   currentDate = date;
+  const dateSpan = `<span class="date">${currentDate}</span>`;
+  dailySummaryTitle.innerHTML = `Daily Summary (${dateSpan})`;
   const rawDataForDay = date ? productivityData[date] || [] : [];
   const compactedDataForDay = compactData(rawDataForDay);
   const dataString = compactedDataForDay.join("\n");
