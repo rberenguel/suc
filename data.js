@@ -1,8 +1,10 @@
 import { drawSwimlaneChart } from "./swimlane.js";
 
-const dateSelector = document.getElementById("date-selector");
+const dateSelector = document.getElementById("date-selector-options");
+const dateSelectorButton = document.getElementById("date-selector-button");
 const productivityDataTextarea = document.getElementById("productivity-data");
 const exportDayButton = document.getElementById("exportDay");
+const exportSelectedButton = document.getElementById("exportSelected");
 const exportAllButton = document.getElementById("exportAll");
 const toggleDataButton = document.getElementById("toggleData");
 const dataContainer = document.getElementById("data-container");
@@ -151,25 +153,60 @@ function loadProductivityData() {
     for (const key in items) {
       if (key.startsWith("themes_")) {
         themes[key] = items[key];
-      } else {
+      } else if (key !== "recentThemes") {
         productivityData[key] = items[key];
       }
     }
     const dates = Object.keys(productivityData).sort().reverse();
-    dateSelector.innerHTML =
-      dates
-        .map((date) => `<option value="${date}">${date}</option>`)
-        .join("") || `<option>No data available</option>`;
+    dateSelector.innerHTML = ""; // Clear the container
+
     if (dates.length > 0) {
+      dates.forEach((date) => {
+        const container = document.createElement("div");
+        container.className = "date-item";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = date;
+        checkbox.id = `date-${date}`;
+        const label = document.createElement("label");
+        label.htmlFor = `date-${date}`;
+        label.textContent = date;
+        label.style.cursor = "pointer";
+        label.addEventListener("click", (e) => {
+          e.preventDefault(); // Prevent checkbox toggle when clicking label text
+          displayDataForDate(date);
+        });
+        container.appendChild(checkbox);
+        container.appendChild(label);
+        dateSelector.appendChild(container);
+      });
       displayDataForDate(dates[0]);
       exportDayButton.disabled = false;
+      exportSelectedButton.disabled = false;
     } else {
+      dateSelector.innerHTML = "<span>No data available</span>";
       displayDataForDate(null);
       exportDayButton.disabled = true;
+      exportSelectedButton.disabled = true;
     }
     exportAllButton.disabled = dates.length === 0;
   });
 }
+
+dateSelectorButton.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const options = document.getElementById("date-selector-options");
+  options.style.display = options.style.display === "none" ? "block" : "none";
+});
+
+window.addEventListener("click", (e) => {
+  const options = document.getElementById("date-selector-options");
+  if (
+    !document.getElementById("date-selector-container").contains(e.target)
+  ) {
+    options.style.display = "none";
+  }
+});
 
 function renderThemeEditor(date) {
   const dayThemes = themes[`themes_${date}`] || {};
@@ -188,12 +225,16 @@ function renderThemeEditor(date) {
     }
     return acc;
   }, {});
-  const uniqueThemeNames = [
-    ...new Set(Object.values(dayThemes).filter(Boolean)),
-  ];
-  themeSuggestions.innerHTML = uniqueThemeNames
-    .map((name) => `<option value="${name}"></option>`)
-    .join("");
+
+  chrome.storage.local.get({ recentThemes: [] }, (data) => {
+    const recentThemes = data.recentThemes;
+    const dayThemeNames = Object.values(dayThemes).filter(Boolean);
+    const uniqueThemeNames = [...new Set([...dayThemeNames, ...recentThemes])];
+    themeSuggestions.innerHTML = uniqueThemeNames
+      .map((name) => `<option value="${name}"></option>`)
+      .join("");
+  });
+
   themeList.innerHTML = Object.entries(titlesByUrl)
     .map(([url, titlesSet]) => {
       const allTitles = Array.from(titlesSet);
@@ -252,10 +293,25 @@ saveThemesButton.addEventListener("click", () => {
   if (!selectedDate) return;
 
   const newDayThemes = {};
+  const themesForRecents = new Set();
   themeList.querySelectorAll("input[data-url]").forEach((input) => {
     const url = input.dataset.url;
     const theme = input.value.trim();
-    if (url && theme) newDayThemes[url] = theme;
+    if (url && theme) {
+      newDayThemes[url] = theme;
+      themesForRecents.add(theme);
+    }
+  });
+
+  chrome.storage.local.get({ recentThemes: [] }, (data) => {
+    let recentThemes = data.recentThemes;
+    const newThemes = Array.from(themesForRecents);
+    recentThemes = [...newThemes, ...recentThemes];
+    recentThemes = [...new Set(recentThemes)]; // Make unique
+    if (recentThemes.length > 10) {
+      recentThemes.length = 10;
+    }
+    chrome.storage.local.set({ recentThemes });
   });
 
   const key = `themes_${selectedDate}`;
@@ -307,9 +363,7 @@ exportDayButton.addEventListener("click", () => {
   download(`suc-data-${selectedDate}.md`, content);
 });
 
-dateSelector.addEventListener("change", (e) =>
-  displayDataForDate(e.target.value),
-);
+
 document.addEventListener("DOMContentLoaded", loadInitialData);
 
 toggleDataButton.addEventListener("click", () => {
@@ -350,6 +404,64 @@ exportAllButton.addEventListener("click", () => {
     .join("\n\n---\n\n");
   if (allData) download("suc-data-all.md", allData);
 });
+
+exportSelectedButton.addEventListener("click", () => {
+  const selectedDates = Array.from(
+    document.querySelectorAll("#date-selector-options input[type=checkbox]:checked"),
+  )
+    .map((cb) => cb.value)
+    .sort();
+
+  if (selectedDates.length === 0) {
+    alert("Please select at least one day to export.");
+    return;
+  }
+
+  const firstDay = selectedDates[0];
+  const lastDay = selectedDates[selectedDates.length - 1];
+  const filename = `${firstDay}-${lastDay}.md`;
+
+  const content = selectedDates
+    .map((date) => {
+      const dayThemes = themes[`themes_${date}`] || {};
+      const dataString = compactData(productivityData[date]).join("\n");
+      const processedData = processDailyData(dataString, dayThemes, settings);
+      const durations = calculateDurations(processedData);
+
+      const sortedDurations = Object.entries(durations).sort(
+        ([, a], [, b]) => b - a,
+      );
+      const totalsPreamble = sortedDurations
+        .map(([theme, minutes]) => {
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          const formattedTime = `${String(hours).padStart(2, "0")}:${String(
+            mins,
+          ).padStart(2, "0")}`;
+          return `- [total] ${formattedTime} ${theme}`;
+        })
+        .join("\n");
+
+      const themePreamble =
+        Object.keys(dayThemes).length > 0
+          ? Object.entries(dayThemes)
+              .sort((a, b) => a[1].localeCompare(b[1]))
+              .map(([url, theme]) => `- ${theme} ${url}`)
+              .join("\n")
+          : "";
+
+      return (
+        `# ${date}\n\n` +
+        `${totalsPreamble ? totalsPreamble + "\n\n" : ""}` +
+        `${themePreamble ? themePreamble + "\n\n" : ""}` +
+        dataString
+      );
+    })
+    .join("\n\n");
+
+  download(filename, content);
+});
+
 
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {
