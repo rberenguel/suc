@@ -197,3 +197,52 @@ button:hover {
 .custom-select-options .date-item label {
   margin-left: 8px;
 }
+
+/* Scrollbar Styles */
+.custom-select-options::-webkit-scrollbar {
+  width: 10px;
+}
+
+.custom-select-options::-webkit-scrollbar-track {
+  background: #000b06;
+  border-radius: 5px;
+}
+
+.custom-select-options::-webkit-scrollbar-thumb {
+  background: #268bd2;
+  border-radius: 5px;
+}
+
+.custom-select-options::-webkit-scrollbar-thumb:hover {
+  background: #3a9be2;
+}
+
+/* Custom Checkbox Styles */
+.custom-select-options input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 1em;
+  height: 1em;
+  background-color: #000b06;
+  border: 1px solid #586e75;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  top: 2px;
+}
+
+.custom-select-options input[type="checkbox"]:checked {
+  background-color: #268bd2;
+  border-color: #268bd2;
+}
+
+.custom-select-options input[type="checkbox"]:checked::after {
+  content: '✔';
+  color: #002b36;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8em;
+}
