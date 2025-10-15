@@ -19,6 +19,7 @@ const durationSummaryContainer = document.getElementById("duration-summary");
 let productivityData = {};
 let settings = {};
 let themes = {};
+let currentDate = null;
 
 function compactData(lines) {
   if (!lines || lines.length < 2) return lines;
@@ -91,8 +92,8 @@ function calculateDurations(processedData) {
     // We can either assume 1 minute or 0. Let's assume 1 to be consistent
     // with the old behavior in this edge case.
     if (processedData.length === 1) {
-        const key = processedData[0].theme || processedData[0].title;
-        durations.set(key, 1);
+      const key = processedData[0].theme || processedData[0].title;
+      durations.set(key, 1);
     }
     return Object.fromEntries(durations);
   }
@@ -101,7 +102,7 @@ function calculateDurations(processedData) {
     const currentEntry = processedData[i];
     const nextEntry = processedData[i + 1];
     const key = currentEntry.theme || currentEntry.title;
-    
+
     // Calculate the difference in minutes between the current and next log entry
     const durationMinutes = (nextEntry.time - currentEntry.time) / (1000 * 60);
 
@@ -118,7 +119,11 @@ function calculateDurations(processedData) {
 function renderDurations(durations, colorMap) {
   const sortedDurations = Object.entries(durations)
     .filter(([_, minutes]) => minutes > 15)
-    .sort(([, a], [, b]) => b - a);
+    .sort(([keyA, a], [keyB, b]) => {
+      if (keyA === "Out of Chrome") return 1;
+      if (keyB === "Out of Chrome") return -1;
+      return b - a;
+    });
 
   if (sortedDurations.length === 0) {
     durationSummaryContainer.innerHTML =
@@ -201,9 +206,7 @@ dateSelectorButton.addEventListener("click", (e) => {
 
 window.addEventListener("click", (e) => {
   const options = document.getElementById("date-selector-options");
-  if (
-    !document.getElementById("date-selector-container").contains(e.target)
-  ) {
+  if (!document.getElementById("date-selector-container").contains(e.target)) {
     options.style.display = "none";
   }
 });
@@ -253,6 +256,7 @@ function renderThemeEditor(date) {
 }
 
 async function displayDataForDate(date) {
+  currentDate = date;
   const rawDataForDay = date ? productivityData[date] || [] : [];
   const compactedDataForDay = compactData(rawDataForDay);
   const dataString = compactedDataForDay.join("\n");
@@ -289,7 +293,7 @@ function download(filename, text) {
 }
 
 saveThemesButton.addEventListener("click", () => {
-  const selectedDate = dateSelector.value;
+  const selectedDate = currentDate;
   if (!selectedDate) return;
 
   const newDayThemes = {};
@@ -363,7 +367,6 @@ exportDayButton.addEventListener("click", () => {
   download(`suc-data-${selectedDate}.md`, content);
 });
 
-
 document.addEventListener("DOMContentLoaded", loadInitialData);
 
 toggleDataButton.addEventListener("click", () => {
@@ -407,7 +410,9 @@ exportAllButton.addEventListener("click", () => {
 
 exportSelectedButton.addEventListener("click", () => {
   const selectedDates = Array.from(
-    document.querySelectorAll("#date-selector-options input[type=checkbox]:checked"),
+    document.querySelectorAll(
+      "#date-selector-options input[type=checkbox]:checked",
+    ),
   )
     .map((cb) => cb.value)
     .sort();
@@ -461,7 +466,6 @@ exportSelectedButton.addEventListener("click", () => {
 
   download(filename, content);
 });
-
 
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {
