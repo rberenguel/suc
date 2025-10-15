@@ -9,6 +9,14 @@
   <body>
     <h1 id="main-header">Activity Data Viewer</h1>
     <input type="file" id="file-loader" accept=".md, .txt" />
+    <div
+      id="day-navigation"
+      style="display: none; text-align: center; margin-bottom: 1em"
+    >
+      <button id="prev-day">&lt; Prev</button>
+      <select id="day-selector" style="width: 200px"></select>
+      <button id="next-day">Next &gt;</button>
+    </div>
     <div id="duration-summary"></div>
     <div id="chart-container"></div>
     <div id="tooltip"></div>
