@@ -158,7 +158,7 @@ export async function drawSwimlaneChart(
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
+    .attr("width", "100%")
     .attr("height", height + margin.top + margin.bottom);
 
   const g = svg

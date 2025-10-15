@@ -6,6 +6,7 @@ const productivityDataTextarea = document.getElementById("productivity-data");
 const exportDayButton = document.getElementById("exportDay");
 const exportSelectedButton = document.getElementById("exportSelected");
 const exportAllButton = document.getElementById("exportAll");
+const exportAllDaysButton = document.getElementById("exportAllDays");
 const toggleDataButton = document.getElementById("toggleData");
 const dataContainer = document.getElementById("data-container");
 const saveDataButton = document.getElementById("saveData");
@@ -88,9 +89,6 @@ function processDailyData(rawDataString, themesForDay, globalSettings) {
 function calculateDurations(processedData) {
   const durations = new Map();
   if (processedData.length < 2) {
-    // If there's only one entry, we can't calculate a duration from it.
-    // We can either assume 1 minute or 0. Let's assume 1 to be consistent
-    // with the old behavior in this edge case.
     if (processedData.length === 1) {
       const key = processedData[0].theme || processedData[0].title;
       durations.set(key, 1);
@@ -102,14 +100,8 @@ function calculateDurations(processedData) {
     const currentEntry = processedData[i];
     const nextEntry = processedData[i + 1];
     const key = currentEntry.theme || currentEntry.title;
-
-    // Calculate the difference in minutes between the current and next log entry
     const durationMinutes = (nextEntry.time - currentEntry.time) / (1000 * 60);
-
-    // If the duration is very long (e.g., overnight), it's a real duration.
-    // If it's 0, it means two events happened in the same minute, we can count it as 1 minute of the first event.
     const effectiveDuration = durationMinutes > 0 ? durationMinutes : 1;
-
     durations.set(key, (durations.get(key) || 0) + effectiveDuration);
   }
 
@@ -134,11 +126,11 @@ function renderDurations(durations, colorMap) {
   durationSummaryContainer.innerHTML = sortedDurations
     .map(([theme, minutes]) => {
       const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
+      const mins = Math.round(minutes % 60);
       const formattedTime = `${String(hours).padStart(2, "0")}:${String(
         mins,
       ).padStart(2, "0")}`;
-      const color = colorMap[theme] || "#2aa198"; // Default color if not found
+      const color = colorMap[theme] || "#2aa198";
       return `<div class="duration-item"><span class="duration-item-theme" style="color: ${color}">${theme}:</span> ${formattedTime}</div>`;
     })
     .join("");
@@ -163,7 +155,7 @@ function loadProductivityData() {
       }
     }
     const dates = Object.keys(productivityData).sort().reverse();
-    dateSelector.innerHTML = ""; // Clear the container
+    dateSelector.innerHTML = "";
 
     if (dates.length > 0) {
       dates.forEach((date) => {
@@ -178,7 +170,7 @@ function loadProductivityData() {
         label.textContent = date;
         label.style.cursor = "pointer";
         label.addEventListener("click", (e) => {
-          e.preventDefault(); // Prevent checkbox toggle when clicking label text
+          e.preventDefault();
           displayDataForDate(date);
         });
         container.appendChild(checkbox);
@@ -215,14 +207,11 @@ function renderThemeEditor(date) {
   const dayThemes = themes[`themes_${date}`] || {};
   const dataForDay = productivityData[date] || [];
   const titlesByUrl = dataForDay.reduce((acc, line) => {
-    let [_, ...mdLink] = line.split(" ");
-    mdLink = mdLink.join(" ");
-    let [title, ...url] = mdLink.split("]");
-    title = title.slice(1);
-    url = url[0].slice(1, -1);
     const urlMatch = line.match(/\((.*?)\)$/);
     const titleMatch = line.match(/\[(.*?)\]/);
     if (urlMatch && titleMatch && urlMatch[1]) {
+      const url = urlMatch[1];
+      const title = titleMatch[1];
       if (!acc[url]) acc[url] = new Set();
       acc[url].add(title);
     }
@@ -265,7 +254,6 @@ async function displayDataForDate(date) {
   const processedData = processDailyData(dataString, dayThemes, settings);
   const durations = calculateDurations(processedData);
 
-  // Draw chart first to get the colorMap
   const colorMap = await drawSwimlaneChart(
     "#chart-container",
     dataString,
@@ -308,10 +296,9 @@ saveThemesButton.addEventListener("click", () => {
   });
 
   chrome.storage.local.get({ recentThemes: [] }, (data) => {
-    let recentThemes = data.recentThemes;
-    const newThemes = Array.from(themesForRecents);
-    recentThemes = [...newThemes, ...recentThemes];
-    recentThemes = [...new Set(recentThemes)]; // Make unique
+    let recentThemes = [
+      ...new Set([...Array.from(themesForRecents), ...data.recentThemes]),
+    ];
     if (recentThemes.length > 10) {
       recentThemes.length = 10;
     }
@@ -328,7 +315,7 @@ saveThemesButton.addEventListener("click", () => {
 });
 
 exportDayButton.addEventListener("click", () => {
-  const selectedDate = dateSelector.value;
+  const selectedDate = currentDate;
   if (!selectedDate || !productivityData[selectedDate]) return;
 
   const dayThemes = themes[`themes_${selectedDate}`] || {};
@@ -342,7 +329,7 @@ exportDayButton.addEventListener("click", () => {
   const totalsPreamble = sortedDurations
     .map(([theme, minutes]) => {
       const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
+      const mins = Math.round(minutes % 60);
       const formattedTime = `${String(hours).padStart(2, "0")}:${String(
         mins,
       ).padStart(2, "0")}`;
@@ -377,12 +364,11 @@ toggleDataButton.addEventListener("click", () => {
 });
 
 saveDataButton.addEventListener("click", () => {
-  const selectedDate = dateSelector.value;
-  if (selectedDate) {
+  if (currentDate) {
     const updatedData = productivityDataTextarea.value
       .split("\n")
       .filter((line) => line.trim() !== "");
-    chrome.storage.local.set({ [selectedDate]: updatedData }, () => {
+    chrome.storage.local.set({ [currentDate]: updatedData }, () => {
       statusNotice.textContent = "Data saved!";
       setTimeout(() => (statusNotice.textContent = ""), 2000);
       loadProductivityData();
@@ -390,7 +376,7 @@ saveDataButton.addEventListener("click", () => {
   }
 });
 
-exportAllButton.addEventListener("click", () => {
+function exportAllRawData() {
   const allData = Object.keys(productivityData)
     .sort()
     .map((date) => {
@@ -406,7 +392,10 @@ exportAllButton.addEventListener("click", () => {
     })
     .join("\n\n---\n\n");
   if (allData) download("suc-data-all.md", allData);
-});
+}
+
+exportAllButton.addEventListener("click", exportAllRawData);
+window.exportAllRawData = exportAllRawData;
 
 exportSelectedButton.addEventListener("click", () => {
   const selectedDates = Array.from(
@@ -424,7 +413,7 @@ exportSelectedButton.addEventListener("click", () => {
 
   const firstDay = selectedDates[0];
   const lastDay = selectedDates[selectedDates.length - 1];
-  const filename = `${firstDay}-${lastDay}.md`;
+  const filename = `suc-data-${firstDay}-${lastDay}.md`;
 
   const content = selectedDates
     .map((date) => {
@@ -439,7 +428,7 @@ exportSelectedButton.addEventListener("click", () => {
       const totalsPreamble = sortedDurations
         .map(([theme, minutes]) => {
           const hours = Math.floor(minutes / 60);
-          const mins = minutes % 60;
+          const mins = Math.round(minutes % 60);
           const formattedTime = `${String(hours).padStart(2, "0")}:${String(
             mins,
           ).padStart(2, "0")}`;
@@ -467,10 +456,59 @@ exportSelectedButton.addEventListener("click", () => {
   download(filename, content);
 });
 
+exportAllDaysButton.addEventListener("click", () => {
+  const allDates = Object.keys(productivityData).sort();
+  if (allDates.length === 0) {
+    alert("No data to export.");
+    return;
+  }
+
+  const firstDay = allDates[0];
+  const lastDay = allDates[allDates.length - 1];
+  const filename = `suc-data-${firstDay}-${lastDay}.md`;
+
+  const content = allDates
+    .map((date) => {
+      const dayThemes = themes[`themes_${date}`] || {};
+      const dataString = compactData(productivityData[date]).join("\n");
+      const processedData = processDailyData(dataString, dayThemes, settings);
+      const durations = calculateDurations(processedData);
+
+      const sortedDurations = Object.entries(durations).sort(
+        ([, a], [, b]) => b - a,
+      );
+      const totalsPreamble = sortedDurations
+        .map(([theme, minutes]) => {
+          const hours = Math.floor(minutes / 60);
+          const mins = Math.round(minutes % 60);
+          const formattedTime = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+          return `- [total] ${formattedTime} ${theme}`;
+        })
+        .join("\n");
+
+      const themePreamble =
+        Object.keys(dayThemes).length > 0
+          ? Object.entries(dayThemes)
+              .sort((a, b) => a[1].localeCompare(b[1]))
+              .map(([url, theme]) => `- ${theme} ${url}`)
+              .join("\n")
+          : "";
+
+      return (
+        `# ${date}\n\n` +
+        `${totalsPreamble ? totalsPreamble + "\n\n" : ""}` +
+        `${themePreamble ? themePreamble + "\n\n" : ""}` +
+        dataString
+      );
+    })
+    .join("\n\n---\n\n");
+
+  download(filename, content);
+});
+
 window.addEventListener("resize", () => {
   if (productivityDataTextarea.value) {
-    const selectedDate = dateSelector.value;
-    const dayThemes = themes[`themes_${selectedDate}`] || {};
+    const dayThemes = themes[`themes_${currentDate}`] || {};
     drawSwimlaneChart(
       "#chart-container",
       productivityDataTextarea.value,
